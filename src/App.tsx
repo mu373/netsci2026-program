@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { ApiDocsPage } from "./components/ApiDocsPage";
 import { CalendarPage } from "./components/CalendarPage";
 import { ChatPage } from "./components/ChatPage";
 import { DetailDrawer } from "./components/DetailDrawer";
@@ -7,7 +8,7 @@ import { PeoplePage } from "./components/PeoplePage";
 import { ProgramsPage } from "./components/ProgramsPage";
 import { TopBar } from "./components/TopBar";
 import { useIsMobile } from "./hooks/useIsMobile";
-import { trackPageView } from "./lib/analytics";
+import { analyticsEnabled, trackPageView } from "./lib/analytics";
 import { defaultDayKey, pushUrl, useRoute } from "./lib/navigation";
 import { useSavedItems } from "./useSavedItems";
 
@@ -17,12 +18,17 @@ type AppConfig = {
   };
 };
 
-function AppFooter({ onAbout }: { onAbout: () => void }) {
+function AppFooter({ onAbout, onPrivacy }: { onAbout: () => void; onPrivacy: () => void }) {
   return (
     <footer className="appFooter">
-      <button className="footerLink" type="button" onClick={onAbout}>
-        About
-      </button>
+      <div className="footerActions">
+        <button className="footerLink" type="button" onClick={onAbout}>
+          About
+        </button>
+        <button className="footerLink" type="button" onClick={onPrivacy}>
+          Privacy notice
+        </button>
+      </div>
       <span>
         Built from the{" "}
         <a className="footerLink" href="https://program.netsci2026.com/" target="_blank" rel="noreferrer">
@@ -31,6 +37,45 @@ function AppFooter({ onAbout }: { onAbout: () => void }) {
         . Please check the source for final details.
       </span>
     </footer>
+  );
+}
+
+function PrivacyNoticeDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div className="aboutBackdrop" onClick={onClose} />
+      <section className="aboutDialog privacyDialog" role="dialog" aria-modal="true" aria-label="Privacy notice">
+        <h2>Privacy Notice</h2>
+        <p>
+          This site includes an experimental AI chat feature. When you send a chat message, we may store the
+          message, timestamp, anonymous browser session ID, referrer, approximate country, browser user agent,
+          and Cloudflare request ID. Do not include sensitive personal information in chat messages.
+        </p>
+        <p>
+          We use this information to review messages, improve the content, debug issues, and prevent abuse.
+          Chat records are stored in Cloudflare infrastructure and are not sold or used for advertising.
+        </p>
+        {analyticsEnabled && (
+          <p>
+            This site uses Google Analytics to help understand aggregate site usage. Google Analytics may use
+            cookies or similar identifiers to collect information about visits, such as pages viewed,
+            approximate location, browser and device information, and interactions with the site. Google
+            explains how it uses information from sites that use its services at{" "}
+            <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">
+              policies.google.com/technologies/partner-sites
+            </a>
+            .
+          </p>
+        )}
+        <p>
+          The chat may generate incomplete or inaccurate responses and should not be relied on as professional,
+          medical, legal, or policy advice.
+        </p>
+        <button className="drawerLink" type="button" onClick={onClose}>
+          Close
+        </button>
+      </section>
+    </>
   );
 }
 
@@ -69,6 +114,7 @@ export default function App() {
   const inlineDetail = !isMobile && route.name === "programs" && !!openItemId;
   const [chatResetKey, setChatResetKey] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [chatEnabled, setChatEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -116,6 +162,8 @@ export default function App() {
         onToggleSaved={saved.toggleSaved}
       />
     );
+  } else if (route.name === "docs") {
+    main = <ApiDocsPage />;
   }
 
   return (
@@ -131,7 +179,9 @@ export default function App() {
             {chatEnabled === true && <ChatPage key={chatResetKey} />}
           </div>
           {route.name !== "chat" && <div className="routePane">{main}</div>}
-          {route.name !== "chat" && <AppFooter onAbout={() => setAboutOpen(true)} />}
+          {route.name !== "chat" && route.name !== "docs" && (
+            <AppFooter onAbout={() => setAboutOpen(true)} onPrivacy={() => setPrivacyOpen(true)} />
+          )}
         </div>
         {inlineDetail && openItemId && (
           <DetailDrawer
@@ -154,6 +204,7 @@ export default function App() {
         />
       )}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {privacyOpen && <PrivacyNoticeDialog onClose={() => setPrivacyOpen(false)} />}
     </div>
   );
 }

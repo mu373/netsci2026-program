@@ -6,6 +6,7 @@
 __pycache__/
 *.pyc
 dist/
+admin/dist/
 node_modules/
 tsconfig.tsbuildinfo
 /program.html

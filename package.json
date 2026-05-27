@@ -10,6 +10,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "pnpm build:data && pnpm build && wrangler deploy",
+    "admin:build": "tsc -p admin/tsconfig.json --noEmit && vite build --config admin/vite.config.ts",
+    "admin:chat-logs": "pnpm admin:build && tsx admin/src/server.ts",
     "extract": "node scripts/extract-program.mjs",
     "extract:cached": "node scripts/extract-program.mjs --input program.html",
     "build:data": "node scripts/build-app-data.mjs",
@@ -36,8 +38,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260527.1",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "tsx": "^4.19.2",
     "wrangler": "^4.95.0"
   }
 }

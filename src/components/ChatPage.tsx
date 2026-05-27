@@ -16,12 +16,48 @@ import {
 } from "./ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "./ai-elements/suggestion";
 
+type MessageSource = "template" | "freeform";
+
+const CHAT_SESSION_STORAGE_KEY = "netsci2026:chat-session-id";
+
 const EXAMPLES = [
   "What kind of topics are there?",
   "Are there talks on GNNs?",
   "Find presentations by a speaker.",
   "Suggest items related to temporal networks.",
 ];
+
+function makeSessionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function getChatSessionId() {
+  const fallback = makeSessionId();
+
+  try {
+    const stored = window.localStorage.getItem(CHAT_SESSION_STORAGE_KEY);
+    if (stored) return stored;
+
+    window.localStorage.setItem(CHAT_SESSION_STORAGE_KEY, fallback);
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
+}
 
 function ChatConversation({
   messages,
@@ -101,12 +137,21 @@ function ChatPromptInput({
 export function ChatPage() {
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
   const { messages, sendMessage, status, stop, error } = useChat({ transport });
+  const [sessionId] = useState(getChatSessionId);
   const [input, setInput] = useState("");
 
-  function submitText(text: string) {
+  function submitText(text: string, messageSource: MessageSource = "freeform") {
     const trimmed = text.trim();
     if (!trimmed || status !== "ready") return;
-    sendMessage({ text: trimmed });
+    sendMessage(
+      { text: trimmed },
+      {
+        body: {
+          sessionId,
+          messageSource,
+        },
+      },
+    );
     setInput("");
   }
 
@@ -118,7 +163,11 @@ export function ChatPage() {
   return (
     <div className="chatPane">
       <Conversation>
-        <ChatConversation messages={messages} status={status} onExample={submitText} />
+        <ChatConversation
+          messages={messages}
+          status={status}
+          onExample={(example) => submitText(example, "template")}
+        />
       </Conversation>
       {error && <div className="chatError">{error.message}</div>}
       <ChatPromptInput

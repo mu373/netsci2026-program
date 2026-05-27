@@ -5,7 +5,8 @@ export type Route =
   | { name: "calendar"; dayKey: string }
   | { name: "programs" }
   | { name: "people"; slug?: string }
-  | { name: "chat" };
+  | { name: "chat" }
+  | { name: "docs" };
 
 export const DAYS = data.days.all;
 const DETAIL_RETURN_KEY = "netsci2026.detailReturn";
@@ -19,6 +20,9 @@ function parseRoute(): Route {
   if (parts[0] === "people") return { name: "people", slug: parts[1] };
   if (parts[0] === "programs") return { name: "programs" };
   if (parts[0] === "chat") return { name: "chat" };
+  if (parts[0] === "docs" || (parts[0] === "api" && parts[1] === "docs")) {
+    return { name: "docs" };
+  }
 
   // Legacy topics URLs -> redirect into Programs.
   if (parts[0] === "topics") {

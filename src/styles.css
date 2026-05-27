@@ -161,10 +161,27 @@ a {
 }
 
 .calendarPane,
-.programsPane {
+.programsPane,
+.apiDocsPane {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.scalarDocsMount {
+  min-height: calc(100vh - var(--topbar-height) - 24px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--pane);
+}
+
+.notice {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+  color: var(--ink-soft);
 }
 
 .dayPills {
@@ -465,6 +482,13 @@ a {
   text-underline-offset: 2px;
 }
 
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .aboutBackdrop {
   position: fixed;
   inset: 0;
@@ -501,6 +525,10 @@ a {
 
 .aboutDialog .drawerLink {
   margin-top: 4px;
+}
+
+.privacyDialog {
+  width: min(560px, calc(100vw - 32px));
 }
 
 .routePane.hidden {

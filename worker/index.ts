@@ -7,7 +7,7 @@ import {
   tool,
 } from "ai";
 import Fuse from "fuse.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { Scalar } from "@scalar/hono-api-reference";
 import programData from "../src/data/program-data.json";
@@ -21,6 +21,8 @@ type Env = {
     GEMINI_API_KEY?: string;
     GOOGLE_GENERATIVE_AI_API_KEY?: string;
     CHAT_RATE_LIMITER: RateLimit;
+    NETSCI2026_CHAT_MESSAGES?: KVNamespace;
+    CHAT_MESSAGE_RETENTION_DAYS?: string;
   };
 };
 
@@ -30,6 +32,20 @@ type ListTopicItemsInput = { topicId: number; limit?: number };
 type ListRelatedItemsInput = { itemId: string; limit?: number };
 type SearchProgramsInput = { query: string; limit?: number };
 type SearchPeopleInput = { query: string; limit?: number };
+
+type ChatMessageRecord = {
+  id: string;
+  at: string;
+  sessionId: string | null;
+  messageSource: "template" | "freeform" | null;
+  message: string;
+  messageCount: number;
+  lastUserMessageId?: string;
+  country: string | null;
+  ray: string | null;
+  referrer: string | null;
+  userAgent: string | null;
+};
 
 const data = programData as AppData;
 const itemById = new Map(data.items.map((item) => [item.id, item]));
@@ -238,11 +254,77 @@ function textFromMessage(message: UIMessage | undefined) {
     .trim();
 }
 
-function lastUserText(messages: UIMessage[]) {
+function lastUserMessage(messages: UIMessage[]) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index].role === "user") return textFromMessage(messages[index]);
+    if (messages[index].role === "user") return messages[index];
   }
-  return "";
+  return undefined;
+}
+
+function retentionTtlSeconds(retentionDays?: string): number | undefined {
+  if (!retentionDays) return undefined;
+
+  const days = Number.parseInt(retentionDays, 10);
+  if (!Number.isFinite(days) || days <= 0) return undefined;
+
+  return days * 24 * 60 * 60;
+}
+
+function normalizeSessionId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const sessionId = value.trim();
+  if (!/^[a-zA-Z0-9._:-]{1,128}$/.test(sessionId)) return null;
+
+  return sessionId;
+}
+
+function normalizeMessageSource(value: unknown): ChatMessageRecord["messageSource"] {
+  return value === "template" || value === "freeform" ? value : null;
+}
+
+async function storeChatMessage(
+  c: Context<Env>,
+  message: string,
+  messageCount: number,
+  sessionId: string | null,
+  messageSource: ChatMessageRecord["messageSource"],
+  lastUserMessageId?: string,
+) {
+  const messageStore = c.env.NETSCI2026_CHAT_MESSAGES;
+  const trimmed = message.trim();
+  if (!messageStore || !trimmed) return;
+
+  const at = new Date().toISOString();
+  const id = crypto.randomUUID();
+  const record: ChatMessageRecord = {
+    id,
+    at,
+    sessionId,
+    messageSource,
+    message: trimmed,
+    messageCount,
+    lastUserMessageId,
+    country: c.req.header("cf-ipcountry") ?? null,
+    ray: c.req.header("cf-ray") ?? null,
+    referrer: c.req.header("referer") ?? null,
+    userAgent: c.req.header("user-agent") ?? null,
+  };
+
+  const expirationTtl = retentionTtlSeconds(c.env.CHAT_MESSAGE_RETENTION_DAYS);
+  await messageStore.put(
+    `netsci2026:chat-message:${at}:${id}`,
+    JSON.stringify(record),
+    {
+      ...(expirationTtl ? { expirationTtl } : {}),
+      metadata: {
+        at,
+        sessionId,
+        messageSource,
+        messagePreview: trimmed.slice(0, 120),
+      },
+    },
+  );
 }
 
 const chatTools = {
@@ -505,8 +587,20 @@ app.get("/api/search", (c) => {
 app.post("/api/chat", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const messages = Array.isArray(body.messages) ? (body.messages as UIMessage[]) : [];
-  const query = lastUserText(messages);
+  const latestUser = lastUserMessage(messages);
+  const query = textFromMessage(latestUser);
+  const sessionId = normalizeSessionId(body.sessionId);
+  const messageSource = normalizeMessageSource(body.messageSource);
   const apiKey = chatApiKey(c.env);
+
+  await storeChatMessage(
+    c,
+    query,
+    messages.length,
+    sessionId,
+    messageSource,
+    latestUser?.id,
+  ).catch((error) => console.error("storeChatMessage error:", error));
 
   if (!apiKey) {
     return c.json({ error: "Chat is disabled because Gemini is not configured." }, 503);

@@ -15,6 +15,12 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
+  "kv_namespaces": [
+    {
+      "binding": "NETSCI2026_CHAT_MESSAGES",
+      "id": "5e7e626b472b4b798297b47b075a0d33"
+    }
+  ],
   "ratelimits": [
     {
       "name": "CHAT_RATE_LIMITER",

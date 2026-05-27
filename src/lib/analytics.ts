@@ -11,6 +11,8 @@ const measurementId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID?.trim();
 let activeMeasurementId: string | null = null;
 let lastPagePath: string | null = null;
 
+export const analyticsEnabled = Boolean(measurementId);
+
 export function initAnalytics() {
   if (!measurementId || typeof window === "undefined") return;
   if (activeMeasurementId === measurementId) return;
