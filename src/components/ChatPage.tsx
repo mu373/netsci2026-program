@@ -22,6 +22,7 @@ const CHAT_SESSION_STORAGE_KEY = "netsci2026:chat-session-id";
 
 const EXAMPLES = [
   "What kind of topics are there?",
+  "Who works on science of science?",
   "Are there talks on GNNs?",
   "Find presentations by a speaker.",
   "Suggest items related to temporal networks.",

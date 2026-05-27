@@ -32,6 +32,7 @@ type ListTopicItemsInput = { topicId: number; limit?: number };
 type ListRelatedItemsInput = { itemId: string; limit?: number };
 type SearchProgramsInput = { query: string; limit?: number };
 type SearchPeopleInput = { query: string; limit?: number };
+type FindPeopleByTopicInput = { query: string; limit?: number };
 
 type ChatMessageRecord = {
   id: string;
@@ -99,10 +100,11 @@ function textForSearch(item: ProgramItem) {
 }
 
 function searchItems(query: string, limit = 12) {
-  const terms = query
+  const normalizedQuery = query.toLocaleLowerCase().trim();
+  const terms = [...new Set(normalizedQuery
     .toLocaleLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((term) => term.length > 1);
+    .filter((term) => term.length > 1))];
 
   const candidates = terms.length
     ? data.items
@@ -110,8 +112,9 @@ function searchItems(query: string, limit = 12) {
           const text = textForSearch(item);
           const hits = terms.reduce((count, term) => count + (text.includes(term) ? 1 : 0), 0);
           const titleHits = terms.reduce((count, term) => count + (item.title.toLocaleLowerCase().includes(term) ? 2 : 0), 0);
+          const exactPhraseBoost = normalizedQuery && text.includes(normalizedQuery) ? 6 : 0;
           const recommendationBoost = item.ranking ? Math.max(0, item.ranking.score - 0.72) * 4 : 0;
-          return { item, score: hits + titleHits + recommendationBoost };
+          return { item, score: hits + titleHits + exactPhraseBoost + recommendationBoost };
         })
         .filter((entry) => entry.score > 0)
     : data.items
@@ -133,6 +136,62 @@ function searchPeople(query: string, limit = 12) {
     person: result.item,
     score: 1 - (result.score ?? 1),
   }));
+}
+
+function findPeopleByTopic(query: string, limit = 12) {
+  const matches = searchItems(query, 40);
+  const peopleById = new Map<
+    string,
+    {
+      person: {
+        id: string;
+        slug: string;
+        name: string;
+        roles: string[];
+        path: string;
+      };
+      score: number;
+      itemIds: Set<string>;
+      items: ReturnType<typeof compactItemSummary>[];
+    }
+  >();
+
+  for (const { item, score } of matches) {
+    for (const person of data.peopleByItem[item.id] || []) {
+      const existing = peopleById.get(person.id);
+      if (existing) {
+        existing.score += score;
+        if (!existing.itemIds.has(item.id)) {
+          existing.itemIds.add(item.id);
+          existing.items.push(compactItemSummary(item));
+        }
+        continue;
+      }
+
+      peopleById.set(person.id, {
+        person: {
+          id: person.id,
+          slug: person.slug,
+          name: person.name,
+          roles: person.roles,
+          path: `/people/${person.slug}`,
+        },
+        score,
+        itemIds: new Set([item.id]),
+        items: [compactItemSummary(item)],
+      });
+    }
+  }
+
+  return [...peopleById.values()]
+    .sort((a, b) => b.score - a.score || a.person.name.localeCompare(b.person.name))
+    .slice(0, limit)
+    .map((entry) => ({
+      score: entry.score,
+      person: entry.person,
+      matchedItemCount: entry.itemIds.size,
+      items: entry.items.slice(0, 4),
+    }));
 }
 
 function linkedPeopleForItem(item: ProgramItem) {
@@ -456,6 +515,35 @@ const chatTools = {
       };
     },
   }),
+  findPeopleByTopic: tool<
+    FindPeopleByTopicInput,
+    {
+      query: string;
+      results: ReturnType<typeof findPeopleByTopic>;
+    }
+  >({
+    description:
+      "Find presenters, authors, and chairs connected to a topical query by searching matching program items and aggregating their people. Use this for questions like 'who works on mobility?' or 'who works on science of science?'",
+    inputSchema: jsonSchema<FindPeopleByTopicInput>({
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Topical phrase to search for, for example mobility, science of science, epidemics, or temporal networks.",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum people to return. Defaults to 10.",
+        },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    }),
+    execute: ({ query, limit }) => ({
+      query,
+      results: findPeopleByTopic(query, limitNumber(limit, 10, 30)),
+    }),
+  }),
   searchPeople: tool<
     SearchPeopleInput,
     {
@@ -579,6 +667,12 @@ app.get("/api/people/search", (c) => {
   return c.json({ query, results: searchPeople(query, limit) });
 });
 
+app.get("/api/people/by-topic", (c) => {
+  const query = c.req.query("q") || "";
+  const limit = limitParam(c.req.query("limit"), 10, 100);
+  return c.json({ query, results: findPeopleByTopic(query, limit) });
+});
+
 app.get("/api/people/:slug", (c) => {
   const person = personBySlug.get(c.req.param("slug"));
   if (!person) return c.json({ error: "Person not found" }, 404);
@@ -628,12 +722,13 @@ app.post("/api/chat", async (c) => {
     system: [
       "You are the NetSci 2026 unofficial guide chat assistant: friendly, clear, and helpful without being chatty.",
       "Answer using only the provided local conference program context and the conversation.",
+      "For questions asking who works on, studies, researches, or is active in a topic, use findPeopleByTopic and answer with a concise Markdown bullet list of linked people. Do not return program_recommendations JSON unless the user asks for talks, posters, sessions, works, or recommendations.",
       "If your answer names, lists, cites, or recommends any specific program items, return only JSON with this schema:",
       '{"kind":"program_recommendations","intro":"short answer","items":[{"id":"talk:123","summary":"one short substantive summary"}],"outro":""}',
       "Use only item IDs that appear in the retrieved context. Do not include title, date, room, presenter, URL, or markdown in the JSON; the app renders those fields.",
       "Every recommended item must include a non-empty summary. For each summary, describe the work's actual substance from the abstract or context in one useful sentence. Do not restate the title, presenter, date, room, or that someone is presenting it.",
       "Retrieved items include a few related item IDs. Use them to suggest adjacent or follow-up talks/posters when helpful.",
-      "You can use tools to search programs, list topics, list items in a topic, list related items for a known item ID, and fuzzy-search people. Use searchPrograms for schedule/logistics questions such as lunch, coffee, registration, room, day, or time, and for keyword searches that vector retrieval might miss.",
+      "You can use tools to search programs, find people by topic, list topics, list items in a topic, list related items for a known item ID, and fuzzy-search people. Use searchPrograms for schedule/logistics questions such as lunch, coffee, registration, room, day, or time, and for keyword searches that vector retrieval might miss.",
       "When answering about topics, state that the topics are based on clustering of program-item embeddings, not official conference tracks.",
       "If tools return program item IDs, those IDs are valid context for the JSON recommendations schema.",
       "Only use concise GitHub-flavored Markdown when the answer does not mention specific talks, posters, or sessions.",
