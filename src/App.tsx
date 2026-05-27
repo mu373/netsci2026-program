@@ -7,6 +7,7 @@ import { PeoplePage } from "./components/PeoplePage";
 import { ProgramsPage } from "./components/ProgramsPage";
 import { TopBar } from "./components/TopBar";
 import { useIsMobile } from "./hooks/useIsMobile";
+import { trackPageView } from "./lib/analytics";
 import { defaultDayKey, pushUrl, useRoute } from "./lib/navigation";
 import { useSavedItems } from "./useSavedItems";
 
@@ -69,6 +70,10 @@ export default function App() {
   const [chatResetKey, setChatResetKey] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [chatEnabled, setChatEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    trackPageView();
+  }, [route, params]);
 
   useEffect(() => {
     let cancelled = false;
