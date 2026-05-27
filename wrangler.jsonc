@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "netsci2026-program",
+  "account_id": "9fda58ef5727f862fe6e0f128070e387",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-05-27",
+  "routes": [
+    {
+      "pattern": "netsci2026.minamiueda.com",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "ratelimits": [
+    {
+      "name": "CHAT_RATE_LIMITER",
+      // Unique within the Cloudflare account. Reusing this ID in another Worker shares counters.
+      "namespace_id": "20260527",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ]
+}

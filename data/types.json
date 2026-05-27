@@ -1,0 +1,24 @@
+{
+  "labels": {
+    "plenary": "Plenary",
+    "school": "School",
+    "lightning": "Lightning",
+    "parallel": "Parallel Session",
+    "satellite": "Satellite",
+    "social": "Community Event",
+    "special": "Special Session",
+    "panel": "Panel",
+    "other": "Other"
+  },
+  "colors": {
+    "plenary": "#d42625",
+    "school": "#9b2323",
+    "lightning": "#e28e1e",
+    "parallel": "#10708e",
+    "satellite": "#0c6664",
+    "social": "#5b7fa6",
+    "special": "#5953a2",
+    "panel": "#ba7517",
+    "other": "#888"
+  }
+}

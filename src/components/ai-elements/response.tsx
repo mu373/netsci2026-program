@@ -1,0 +1,231 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { CalendarDays, MapPin, UserRound } from "lucide-react";
+import { itemById } from "../../data";
+import { pushUrl, rememberDetailReturn, scrollPageToTop } from "../../lib/navigation";
+import { displayTitle } from "../../lib/programHelpers";
+import type { MouseEvent } from "react";
+import type { ProgramItem } from "../../types";
+
+type ProgramRecommendationPayload = {
+  kind: "program_recommendations";
+  intro?: string;
+  items: { id: string; why?: string }[];
+  outro?: string;
+};
+
+function linkifyLocalPaths(markdown: string) {
+  return markdown
+    .replace(/\b(?:URL|Path):\s*(\/(?:programs|day|people)[^\s)]+)/g, "[Open item]($1)")
+    .replace(/(?<!\]\()(?<!\()(\/(?:programs|day|people)[^\s)]+)/g, "[$1]($1)");
+}
+
+function pathForItem(item: ProgramItem) {
+  if (item.kind === "session") return `/day/${item.dayKey || "mon"}?item=${item.id}`;
+  return `/programs?item=${item.id}`;
+}
+
+function openPath(path: string) {
+  const url = new URL(path, window.location.origin);
+  if (location.pathname === "/chat" && url.searchParams.has("item")) {
+    const params = new URLSearchParams();
+    rememberDetailReturn("chat");
+    params.set("item", url.searchParams.get("item") || "");
+    params.set("returnTo", "chat");
+    pushUrl("/chat", params);
+    return;
+  }
+  pushUrl(url.pathname, url.searchParams);
+  scrollPageToTop();
+}
+
+function openInternalLink(event: MouseEvent<HTMLAnchorElement>, href: string | undefined) {
+  if (!href?.startsWith("/") || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  openPath(href);
+}
+
+function parseProgramRecommendations(text: string): ProgramRecommendationPayload | null {
+  const trimmed = text.trim();
+  const unfenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/)?.[1] ?? trimmed;
+  const start = unfenced.indexOf("{");
+  const end = unfenced.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+
+  try {
+    const payload = JSON.parse(unfenced.slice(start, end + 1)) as Record<string, unknown>;
+    if (payload.kind !== "program_recommendations" && !Array.isArray(payload.items)) return null;
+    const rawItems = Array.isArray(payload.items) ? payload.items : [];
+    const items = rawItems
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const record = entry as Record<string, unknown>;
+        const id = resolveRecommendationId(record.id ?? record.itemId ?? record.item_id);
+        if (!id) return null;
+        return {
+          id,
+          why: typeof record.why === "string" ? record.why : typeof record.reason === "string" ? record.reason : "",
+        };
+      })
+      .filter((entry): entry is { id: string; why: string } => Boolean(entry));
+    if (!items.length) return null;
+    return {
+      kind: "program_recommendations",
+      intro: typeof payload.intro === "string" ? payload.intro : "",
+      items,
+      outro: typeof payload.outro === "string" ? payload.outro : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseProgramReferenceList(text: string): ProgramRecommendationPayload | null {
+  const lines = text.split(/\n+/);
+  const refs: { id: string; why: string; lineIndex: number }[] = [];
+
+  lines.forEach((line, lineIndex) => {
+    const match = line.match(/\b(?:talk|poster|session):[A-Za-z0-9_-]+\b/);
+    const id = resolveRecommendationId(match?.[0]);
+    if (!id) return;
+    const item = itemById.get(id);
+    const cleaned = line
+      .replace(/\b(?:talk|poster|session):[A-Za-z0-9_-]+\b/g, "")
+      .replace(/^[\s>*-]*(?:\d+\.)?\s*/, "")
+      .replace(/[`()[\]]/g, "")
+      .trim();
+    const why = item && cleaned.toLocaleLowerCase() === displayTitle(item).toLocaleLowerCase() ? "" : cleaned;
+    refs.push({
+      id,
+      why,
+      lineIndex,
+    });
+  });
+
+  if (refs.length < 1) return null;
+  const first = refs[0].lineIndex;
+  const last = refs[refs.length - 1].lineIndex;
+  return {
+    kind: "program_recommendations",
+    intro: lines.slice(0, first).join("\n").trim(),
+    items: refs.map(({ id, why }) => ({ id, why })),
+    outro: lines.slice(last + 1).join("\n").trim(),
+  };
+}
+
+function resolveRecommendationId(value: unknown) {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const raw = String(value).trim();
+  if (itemById.has(raw)) return raw;
+
+  const pathMatch = raw.match(/[?&]item=([^&\s]+)/);
+  if (pathMatch) {
+    const decoded = decodeURIComponent(pathMatch[1]);
+    if (itemById.has(decoded)) return decoded;
+  }
+
+  for (const kind of ["talk", "poster", "session"]) {
+    const id = `${kind}:${raw.replace(/^(talk|poster|session):/, "")}`;
+    if (itemById.has(id)) return id;
+  }
+
+  return null;
+}
+
+function looksLikeRecommendationJson(text: string) {
+  const trimmed = text.trim();
+  return (
+    trimmed === "`" ||
+    trimmed === "``" ||
+    trimmed.startsWith("```") ||
+    trimmed.startsWith("{") ||
+    trimmed.startsWith('"kind"') ||
+    trimmed.startsWith('"items"') ||
+    trimmed.includes('"program_recommendations"') ||
+    trimmed.includes('"items"')
+  );
+}
+
+function itemMeta(item: ProgramItem) {
+  return {
+    when: [item.dayLabel, item.time].filter(Boolean).join(", ") || "To Be Announced",
+    where: item.room || "To Be Announced",
+    presenter: item.presenter || item.authors || item.chair || "To Be Announced",
+  };
+}
+
+function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
+  return (
+    <div className="programRecommendations">
+      {payload.intro && <p className="recommendationIntro">{payload.intro}</p>}
+      <div className="recommendationList">
+        {payload.items.map((entry) => {
+          const item = itemById.get(entry.id);
+          if (!item) return null;
+          const path = pathForItem(item);
+          const meta = itemMeta(item);
+          return (
+            <button
+              type="button"
+              key={entry.id}
+              className="recommendationCard"
+              onClick={() => openPath(path)}
+            >
+              <span className="recommendationTitle">{displayTitle(item)}</span>
+              <span className="recommendationMeta">
+                <span>
+                  <CalendarDays size={12} aria-hidden="true" />
+                  {meta.when}
+                </span>
+                <span>
+                  <MapPin size={12} aria-hidden="true" />
+                  {meta.where}
+                </span>
+                <span>
+                  <UserRound size={12} aria-hidden="true" />
+                  {meta.presenter}
+                </span>
+              </span>
+              {entry.why && <span className="recommendationWhy">{entry.why}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {payload.outro && <p className="recommendationOutro">{payload.outro}</p>}
+    </div>
+  );
+}
+
+export function Response({ children }: { children: string }) {
+  const recommendations = parseProgramRecommendations(children) ?? parseProgramReferenceList(children);
+  if (recommendations) return <ProgramRecommendationCards payload={recommendations} />;
+  if (looksLikeRecommendationJson(children)) {
+    return null;
+  }
+
+  return (
+    <div className="aiResponse">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              onClick={(event) => openInternalLink(event, href)}
+              target={href?.startsWith("/") ? undefined : "_blank"}
+              rel="noreferrer"
+            >
+              {children}
+            </a>
+          ),
+          code: ({ children, className }) => {
+            const inline = !className;
+            return inline ? <code>{children}</code> : <code className={className}>{children}</code>;
+          },
+        }}
+      >
+        {linkifyLocalPaths(children)}
+      </ReactMarkdown>
+    </div>
+  );
+}

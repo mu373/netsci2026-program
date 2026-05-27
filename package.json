@@ -1,0 +1,43 @@
+{
+  "name": "netsci2026-program-extractor",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "wrangler dev",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm build:data && pnpm build && wrangler deploy",
+    "extract": "node scripts/extract-program.mjs",
+    "extract:cached": "node scripts/extract-program.mjs --input program.html",
+    "build:data": "node scripts/build-app-data.mjs",
+    "similarity": "pnpm embed:netsci && pnpm cluster:netsci",
+    "embed:netsci": "uv run python scripts/similarity.py embed-netsci",
+    "cluster:netsci": "uv run python scripts/similarity.py cluster-netsci"
+  },
+  "packageManager": "pnpm@10.0.0",
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.79",
+    "@ai-sdk/react": "^3.0.193",
+    "@scalar/hono-api-reference": "^0.10.19",
+    "@vitejs/plugin-react": "^6.0.2",
+    "ai": "^6.0.191",
+    "fuse.js": "^7.3.0",
+    "hono": "^4.12.23",
+    "lucide-react": "^1.16.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260527.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "wrangler": "^4.95.0"
+  }
+}

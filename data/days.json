@@ -1,0 +1,65 @@
+{
+  "satellite": [
+    {
+      "key": "mon",
+      "abbr": "Mon",
+      "date": "June 1"
+    },
+    {
+      "key": "tue",
+      "abbr": "Tue",
+      "date": "June 2"
+    }
+  ],
+  "main": [
+    {
+      "key": "wed",
+      "abbr": "Wed",
+      "date": "June 3"
+    },
+    {
+      "key": "thu",
+      "abbr": "Thu",
+      "date": "June 4"
+    },
+    {
+      "key": "fri",
+      "abbr": "Fri",
+      "date": "June 5"
+    }
+  ],
+  "all": [
+    {
+      "key": "mon",
+      "abbr": "Mon",
+      "date": "June 1"
+    },
+    {
+      "key": "tue",
+      "abbr": "Tue",
+      "date": "June 2"
+    },
+    {
+      "key": "wed",
+      "abbr": "Wed",
+      "date": "June 3"
+    },
+    {
+      "key": "thu",
+      "abbr": "Thu",
+      "date": "June 4"
+    },
+    {
+      "key": "fri",
+      "abbr": "Fri",
+      "date": "June 5"
+    }
+  ],
+  "labels": {
+    "mon": "Mon June 1",
+    "tue": "Tue June 2",
+    "wed": "Wed June 3",
+    "thu": "Thu June 4",
+    "fri": "Fri June 5"
+  }
+}
