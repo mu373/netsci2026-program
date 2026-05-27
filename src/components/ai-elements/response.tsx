@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CalendarDays, MapPin, UserRound } from "lucide-react";
-import { itemById } from "../../data";
+import { itemById, people } from "../../data";
 import { pushUrl, rememberDetailReturn, scrollPageToTop } from "../../lib/navigation";
 import { displayTitle } from "../../lib/programHelpers";
 import type { MouseEvent } from "react";
@@ -10,7 +10,7 @@ import type { ProgramItem } from "../../types";
 type ProgramRecommendationPayload = {
   kind: "program_recommendations";
   intro?: string;
-  items: { id: string; why?: string }[];
+  items: { id: string; summary?: string }[];
   outro?: string;
 };
 
@@ -18,6 +18,131 @@ function linkifyLocalPaths(markdown: string) {
   return markdown
     .replace(/\b(?:URL|Path):\s*(\/(?:programs|day|people)[^\s)]+)/g, "[Open item]($1)")
     .replace(/(?<!\]\()(?<!\()(\/(?:programs|day|people)[^\s)]+)/g, "[$1]($1)");
+}
+
+const personLinks = people
+  .filter((person) => person.name.length >= 4)
+  .sort((a, b) => b.name.length - a.name.length)
+  .map((person) => ({
+    name: person.name,
+    path: `/people/${person.slug}`,
+  }));
+const personPaths = new Set(personLinks.map((person) => person.path));
+
+function markdownProtectedRanges(markdown: string) {
+  const ranges: { start: number; end: number }[] = [];
+  const patterns = [
+    /```[\s\S]*?```/g,
+    /`[^`\n]+`/g,
+    /\[[^\]]+\]\([^)]+\)/g,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of markdown.matchAll(pattern)) {
+      if (match.index === undefined) continue;
+      ranges.push({ start: match.index, end: match.index + match[0].length });
+    }
+  }
+
+  return ranges.sort((a, b) => a.start - b.start);
+}
+
+function isNameBoundary(value: string | undefined) {
+  return !value || !/[\p{L}\p{N}_]/u.test(value);
+}
+
+function linkifyPersonSegment(segment: string) {
+  let output = "";
+  let index = 0;
+
+  while (index < segment.length) {
+    const person = personLinks.find((entry) => {
+      if (!segment.startsWith(entry.name, index)) return false;
+      return isNameBoundary(segment[index - 1]) && isNameBoundary(segment[index + entry.name.length]);
+    });
+
+    if (person) {
+      output += `[${person.name}](${person.path})`;
+      index += person.name.length;
+      continue;
+    }
+
+    output += segment[index];
+    index += 1;
+  }
+
+  return output;
+}
+
+function linkifyPeople(markdown: string) {
+  const ranges = markdownProtectedRanges(markdown);
+  if (!ranges.length) return linkifyPersonSegment(markdown);
+
+  let output = "";
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.start < cursor) continue;
+    output += linkifyPersonSegment(markdown.slice(cursor, range.start));
+    output += markdown.slice(range.start, range.end);
+    cursor = range.end;
+  }
+  output += linkifyPersonSegment(markdown.slice(cursor));
+  return output;
+}
+
+function standalonePersonLine(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed || /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) return false;
+  const match = trimmed.match(/^\[[^\]]+\]\((\/people\/[^)\s]+)\)[.!?]?$/);
+  return Boolean(match && personPaths.has(match[1]));
+}
+
+function formatPersonLists(markdown: string) {
+  const lines = markdown.split("\n");
+  const output: string[] = [];
+  let personBlock: { line: string; blankBefore: string[] }[] = [];
+  let pendingBlankLines: string[] = [];
+
+  function flushPersonBlock() {
+    if (personBlock.length >= 2) {
+      output.push(...personBlock.map((entry) => `- ${entry.line.trim()}`));
+    } else {
+      for (const entry of personBlock) {
+        output.push(...entry.blankBefore, entry.line);
+      }
+    }
+    personBlock = [];
+  }
+
+  for (const line of lines) {
+    if (!line.trim()) {
+      if (personBlock.length) {
+        pendingBlankLines.push(line);
+      } else {
+        output.push(line);
+      }
+      continue;
+    }
+
+    if (standalonePersonLine(line)) {
+      personBlock.push({ line, blankBefore: pendingBlankLines });
+      pendingBlankLines = [];
+      continue;
+    }
+
+    flushPersonBlock();
+    output.push(...pendingBlankLines);
+    pendingBlankLines = [];
+    output.push(line);
+  }
+
+  flushPersonBlock();
+  output.push(...pendingBlankLines);
+  return output.join("\n");
+}
+
+function formatChatMarkdown(markdown: string) {
+  return formatPersonLists(linkifyPeople(linkifyLocalPaths(markdown)));
 }
 
 function pathForItem(item: ProgramItem) {
@@ -64,10 +189,10 @@ function parseProgramRecommendations(text: string): ProgramRecommendationPayload
         if (!id) return null;
         return {
           id,
-          why: typeof record.why === "string" ? record.why : typeof record.reason === "string" ? record.reason : "",
+          summary: typeof record.summary === "string" ? record.summary : "",
         };
       })
-      .filter((entry): entry is { id: string; why: string } => Boolean(entry));
+      .filter((entry): entry is { id: string; summary: string } => Boolean(entry));
     if (!items.length) return null;
     return {
       kind: "program_recommendations",
@@ -82,7 +207,7 @@ function parseProgramRecommendations(text: string): ProgramRecommendationPayload
 
 function parseProgramReferenceList(text: string): ProgramRecommendationPayload | null {
   const lines = text.split(/\n+/);
-  const refs: { id: string; why: string; lineIndex: number }[] = [];
+  const refs: { id: string; summary: string; lineIndex: number }[] = [];
 
   lines.forEach((line, lineIndex) => {
     const match = line.match(/\b(?:talk|poster|session):[A-Za-z0-9_-]+\b/);
@@ -94,10 +219,10 @@ function parseProgramReferenceList(text: string): ProgramRecommendationPayload |
       .replace(/^[\s>*-]*(?:\d+\.)?\s*/, "")
       .replace(/[`()[\]]/g, "")
       .trim();
-    const why = item && cleaned.toLocaleLowerCase() === displayTitle(item).toLocaleLowerCase() ? "" : cleaned;
+    const summary = item && cleaned.toLocaleLowerCase() === displayTitle(item).toLocaleLowerCase() ? "" : cleaned;
     refs.push({
       id,
-      why,
+      summary,
       lineIndex,
     });
   });
@@ -108,7 +233,7 @@ function parseProgramReferenceList(text: string): ProgramRecommendationPayload |
   return {
     kind: "program_recommendations",
     intro: lines.slice(0, first).join("\n").trim(),
-    items: refs.map(({ id, why }) => ({ id, why })),
+    items: refs.map(({ id, summary }) => ({ id, summary })),
     outro: lines.slice(last + 1).join("\n").trim(),
   };
 }
@@ -154,6 +279,13 @@ function itemMeta(item: ProgramItem) {
   };
 }
 
+function localItemSummary(item: ProgramItem) {
+  const cleaned = item.abstract.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const sentence = cleaned.match(/^.{80,220}?(?:[.!?](?:\s|$)|$)/)?.[0] || cleaned.slice(0, 220);
+  return sentence.length < cleaned.length && !/[.!?]$/.test(sentence) ? `${sentence.trim()}...` : sentence.trim();
+}
+
 function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
   return (
     <div className="programRecommendations">
@@ -164,6 +296,7 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
           if (!item) return null;
           const path = pathForItem(item);
           const meta = itemMeta(item);
+          const summary = entry.summary?.trim() || localItemSummary(item);
           return (
             <button
               type="button"
@@ -186,7 +319,7 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
                   {meta.presenter}
                 </span>
               </span>
-              {entry.why && <span className="recommendationWhy">{entry.why}</span>}
+              {summary && <span className="recommendationSummary">{summary}</span>}
             </button>
           );
         })}
@@ -224,7 +357,7 @@ export function Response({ children }: { children: string }) {
           },
         }}
       >
-        {linkifyLocalPaths(children)}
+        {formatChatMarkdown(children)}
       </ReactMarkdown>
     </div>
   );

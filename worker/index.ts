@@ -135,7 +135,16 @@ function searchPeople(query: string, limit = 12) {
   }));
 }
 
+function linkedPeopleForItem(item: ProgramItem) {
+  const people = data.peopleByItem[item.id] || [];
+  if (people.length) {
+    return people.map((person) => `[${person.name}](/people/${person.slug})`).join(", ");
+  }
+  return item.presenter || item.authors || item.chair || "";
+}
+
 function compactItemSummary(item: ProgramItem) {
+  const people = data.peopleByItem[item.id] || [];
   return {
     id: item.id,
     title: item.title,
@@ -144,7 +153,12 @@ function compactItemSummary(item: ProgramItem) {
     type: item.type,
     when: [item.dayLabel, item.time].filter(Boolean).join(" | "),
     room: item.room || "TBA",
-    people: item.presenter || item.authors || item.chair || "",
+    people: people.map((person) => ({
+      name: person.name,
+      path: `/people/${person.slug}`,
+      roles: person.roles,
+    })),
+    peopleText: linkedPeopleForItem(item),
   };
 }
 
@@ -215,7 +229,7 @@ function pathForItem(item: ProgramItem) {
 }
 
 function conciseItem(item: ProgramItem, index: number) {
-  const people = item.presenter || item.authors || "";
+  const people = linkedPeopleForItem(item);
   const abstract = item.abstract ? `\nAbstract: ${item.abstract.slice(0, 700)}` : "";
   const related = compactRelatedItems(item.id, 3);
   return [
@@ -612,19 +626,22 @@ app.post("/api/chat", async (c) => {
   const result = streamText({
     model: google("gemini-2.5-flash"),
     system: [
-      "You are the NetSci 2026 unofficial guide chat assistant.",
+      "You are the NetSci 2026 unofficial guide chat assistant: friendly, clear, and helpful without being chatty.",
       "Answer using only the provided local conference program context and the conversation.",
       "If your answer names, lists, cites, or recommends any specific program items, return only JSON with this schema:",
-      '{"kind":"program_recommendations","intro":"short answer","items":[{"id":"talk:123","why":"one short reason"}],"outro":""}',
+      '{"kind":"program_recommendations","intro":"short answer","items":[{"id":"talk:123","summary":"one short substantive summary"}],"outro":""}',
       "Use only item IDs that appear in the retrieved context. Do not include title, date, room, presenter, URL, or markdown in the JSON; the app renders those fields.",
+      "Every recommended item must include a non-empty summary. For each summary, describe the work's actual substance from the abstract or context in one useful sentence. Do not restate the title, presenter, date, room, or that someone is presenting it.",
       "Retrieved items include a few related item IDs. Use them to suggest adjacent or follow-up talks/posters when helpful.",
       "You can use tools to search programs, list topics, list items in a topic, list related items for a known item ID, and fuzzy-search people. Use searchPrograms for schedule/logistics questions such as lunch, coffee, registration, room, day, or time, and for keyword searches that vector retrieval might miss.",
       "When answering about topics, state that the topics are based on clustering of program-item embeddings, not official conference tracks.",
       "If tools return program item IDs, those IDs are valid context for the JSON recommendations schema.",
       "Only use concise GitHub-flavored Markdown when the answer does not mention specific talks, posters, or sessions.",
+      "When giving a list in Markdown, including people, topics, names, or options, always format each entry as a bullet point using '- '; never put list entries on separate bare lines.",
+      "When mentioning a person and a /people/... path is available in context or tool results, format the name as a Markdown link: [Name](/people/slug).",
       "Prefer 3 to 6 strongest matches unless the user asks for more.",
       "If the context is insufficient, say what is missing and suggest a better search query.",
-      "Keep answers concise and practical.",
+      "Keep answers concise and practical, but end useful answers with one brief next-step offer, such as asking whether the user wants relevant works, times, or related people.",
       "",
       "Retrieved program context (lexical search):",
       context || "No matching context was retrieved.",

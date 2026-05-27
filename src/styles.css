@@ -1888,8 +1888,15 @@ a {
 
 .aiResponse ul,
 .aiResponse ol {
-  padding-left: 0;
-  list-style: none;
+  padding-left: 1.35rem;
+}
+
+.aiResponse ul {
+  list-style: disc;
+}
+
+.aiResponse ol {
+  list-style: decimal;
 }
 
 .aiResponse li + li {
@@ -2033,7 +2040,7 @@ a {
   color: var(--ink-mute);
 }
 
-.recommendationWhy {
+.recommendationSummary {
   color: var(--ink-soft);
   font-size: 12px;
   line-height: 1.35;
