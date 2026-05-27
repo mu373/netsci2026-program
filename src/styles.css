@@ -1920,7 +1920,7 @@ a {
 }
 
 .aiResponse a {
-  color: var(--link);
+  color: #3f3f46;
   font-weight: 650;
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -1928,7 +1928,7 @@ a {
 }
 
 .aiResponse a:hover {
-  color: #17475f;
+  color: var(--ink);
 }
 
 .aiResponse code {
@@ -2005,12 +2005,12 @@ a {
 }
 
 .recommendationCard:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  border-color: #d4d4d8;
+  background: #fafafa;
 }
 
 .recommendationTitle {
-  color: var(--link);
+  color: #3f3f46;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.3;
