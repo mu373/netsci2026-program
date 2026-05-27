@@ -162,8 +162,10 @@ export default function App() {
         onToggleSaved={saved.toggleSaved}
       />
     );
-  } else if (route.name === "docs") {
-    main = <ApiDocsPage />;
+  }
+
+  if (route.name === "docs") {
+    return <ApiDocsPage />;
   }
 
   return (
@@ -179,7 +181,7 @@ export default function App() {
             {chatEnabled === true && <ChatPage key={chatResetKey} />}
           </div>
           {route.name !== "chat" && <div className="routePane">{main}</div>}
-          {route.name !== "chat" && route.name !== "docs" && (
+          {route.name !== "chat" && (
             <AppFooter onAbout={() => setAboutOpen(true)} onPrivacy={() => setPrivacyOpen(true)} />
           )}
         </div>

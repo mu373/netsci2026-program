@@ -168,10 +168,12 @@ a {
   gap: 10px;
 }
 
+.apiDocsPane {
+  min-height: 100vh;
+}
+
 .scalarDocsMount {
-  min-height: calc(100vh - var(--topbar-height) - 24px);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  min-height: 100vh;
   overflow: hidden;
   background: var(--pane);
 }
