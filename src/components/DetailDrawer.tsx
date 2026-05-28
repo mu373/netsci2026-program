@@ -1,4 +1,4 @@
-import { CalendarPlus, ChevronDown, ChevronLeft, Download, ExternalLink, X } from "lucide-react";
+import { CalendarPlus, ChevronDown, ChevronLeft, ExternalLink, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   itemById,
@@ -150,21 +150,21 @@ export function DetailDrawer({
                     className="calendarMenuItem"
                     role="menuitem"
                     onClick={() => {
-                      openItemInGoogleCalendar(item, savedRecord?.note);
+                      downloadItemIcs(item, savedRecord?.note);
                       setCalendarMenuOpen(false);
                     }}
                   >
-                    <ExternalLink size={13} /> Open in Google Calendar
+                    <CalendarPlus size={13} /> Calendar app
                   </button>
                   <button
                     className="calendarMenuItem"
                     role="menuitem"
                     onClick={() => {
-                      downloadItemIcs(item, savedRecord?.note);
+                      openItemInGoogleCalendar(item, savedRecord?.note);
                       setCalendarMenuOpen(false);
                     }}
                   >
-                    <Download size={13} /> Download .ics
+                    <ExternalLink size={13} /> Google Calendar
                   </button>
                 </div>
               )}
