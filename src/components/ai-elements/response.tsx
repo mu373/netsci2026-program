@@ -41,6 +41,40 @@ function openInternalLink(event: MouseEvent<HTMLAnchorElement>, href: string | u
   openPath(href);
 }
 
+function MarkdownResponse({
+  children,
+  className = "aiResponse",
+}: {
+  children: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              onClick={(event) => openInternalLink(event, href)}
+              target={href?.startsWith("/") ? undefined : "_blank"}
+              rel="noreferrer"
+            >
+              {children}
+            </a>
+          ),
+          code: ({ children, className }) => {
+            const inline = !className;
+            return inline ? <code>{children}</code> : <code className={className}>{children}</code>;
+          },
+        }}
+      >
+        {formatChatMarkdown(children)}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
   const [itemById, setItemById] = useState<Map<string, ProgramItem> | null>(null);
 
@@ -58,7 +92,9 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
 
   return (
     <div className="programRecommendations">
-      {payload.intro && <p className="recommendationIntro">{payload.intro}</p>}
+      {payload.intro && (
+        <MarkdownResponse className="aiResponse recommendationIntro">{payload.intro}</MarkdownResponse>
+      )}
       <div className="recommendationList">
         {payload.items.map((entry) => {
           const item = itemById.get(entry.id);
@@ -93,7 +129,9 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
           );
         })}
       </div>
-      {payload.outro && <p className="recommendationOutro">{payload.outro}</p>}
+      {payload.outro && (
+        <MarkdownResponse className="aiResponse recommendationOutro">{payload.outro}</MarkdownResponse>
+      )}
     </div>
   );
 }
@@ -106,28 +144,6 @@ export function Response({ children }: { children: string }) {
   }
 
   return (
-    <div className="aiResponse">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          a: ({ children, href }) => (
-            <a
-              href={href}
-              onClick={(event) => openInternalLink(event, href)}
-              target={href?.startsWith("/") ? undefined : "_blank"}
-              rel="noreferrer"
-            >
-              {children}
-            </a>
-          ),
-          code: ({ children, className }) => {
-            const inline = !className;
-            return inline ? <code>{children}</code> : <code className={className}>{children}</code>;
-          },
-        }}
-      >
-        {formatChatMarkdown(children)}
-      </ReactMarkdown>
-    </div>
+    <MarkdownResponse>{children}</MarkdownResponse>
   );
 }

@@ -40,36 +40,87 @@ export function resolveRecommendationId(value: unknown) {
 export function parseProgramRecommendations(text: string): ProgramRecommendationPayload | null {
   const trimmed = text.trim();
   const unfenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/)?.[1] ?? trimmed;
-  const start = unfenced.indexOf("{");
-  const end = unfenced.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
 
-  try {
-    const payload = JSON.parse(unfenced.slice(start, end + 1)) as Record<string, unknown>;
-    if (payload.kind !== "program_recommendations" && !Array.isArray(payload.items)) return null;
-    const rawItems = Array.isArray(payload.items) ? payload.items : [];
-    const items = rawItems
-      .map((entry) => {
-        if (!entry || typeof entry !== "object") return null;
-        const record = entry as Record<string, unknown>;
-        const id = resolveRecommendationId(record.id ?? record.itemId ?? record.item_id);
-        if (!id) return null;
-        return {
-          id,
-          summary: typeof record.summary === "string" ? record.summary : "",
-        };
-      })
-      .filter((entry): entry is { id: string; summary: string } => Boolean(entry));
-    if (!items.length) return null;
-    return {
-      kind: "program_recommendations",
-      intro: typeof payload.intro === "string" ? payload.intro : "",
-      items,
-      outro: typeof payload.outro === "string" ? payload.outro : "",
-    };
-  } catch {
-    return null;
+  for (const candidate of jsonObjectCandidates(unfenced)) {
+    try {
+      const payload = JSON.parse(candidate) as Record<string, unknown>;
+      const recommendations = normalizeProgramRecommendations(payload);
+      if (recommendations) return recommendations;
+    } catch {
+      // Try the next JSON-looking object in the message.
+    }
   }
+
+  return null;
+}
+
+function jsonObjectCandidates(text: string) {
+  const candidates: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (character === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+      continue;
+    }
+
+    if (character === "}" && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        candidates.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+
+  return candidates;
+}
+
+function normalizeProgramRecommendations(
+  payload: Record<string, unknown>,
+): ProgramRecommendationPayload | null {
+  if (payload.kind !== "program_recommendations" || !Array.isArray(payload.items)) return null;
+  const items = payload.items
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Record<string, unknown>;
+      const id = resolveRecommendationId(record.id ?? record.itemId ?? record.item_id);
+      if (!id) return null;
+      return {
+        id,
+        summary: typeof record.summary === "string" ? record.summary : "",
+      };
+    })
+    .filter((entry): entry is { id: string; summary: string } => Boolean(entry));
+  if (!items.length) return null;
+  return {
+    kind: "program_recommendations",
+    intro: typeof payload.intro === "string" ? payload.intro : "",
+    items,
+    outro: typeof payload.outro === "string" ? payload.outro : "",
+  };
 }
 
 function escapeRegExp(value: string) {
@@ -136,6 +187,9 @@ export function looksLikeRecommendationJson(text: string) {
     trimmed.startsWith("{") ||
     trimmed.startsWith('"kind"') ||
     trimmed.startsWith('"items"') ||
+    /(?:^|\n)\s*\{\s*$/.test(text) ||
+    /(?:^|\n)\s*\{\s*"kind"\s*:/.test(text) ||
+    /(?:^|\n)\s*\{\s*"items"\s*:/.test(text) ||
     trimmed.includes('"program_recommendations"') ||
     trimmed.includes('"items"')
   );
