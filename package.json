@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "dev:worker": "wrangler dev",
-    "test": "vitest run",
+    "test": "vitest run --exclude worker/chat/live-chat.test.ts",
+    "test:chat:live": "vitest run worker/chat/live-chat.test.ts --testTimeout 60000",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "pnpm build:data && pnpm build && wrangler deploy",
