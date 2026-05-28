@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { data, itemById } from "../data";
 
 export type Route =
   | { name: "calendar"; dayKey: string }
@@ -8,7 +7,13 @@ export type Route =
   | { name: "chat" }
   | { name: "docs" };
 
-export const DAYS = data.days.all;
+export const DAYS = [
+  { key: "mon", abbr: "Mon", date: "June 1" },
+  { key: "tue", abbr: "Tue", date: "June 2" },
+  { key: "wed", abbr: "Wed", date: "June 3" },
+  { key: "thu", abbr: "Thu", date: "June 4" },
+  { key: "fri", abbr: "Fri", date: "June 5" },
+];
 const DETAIL_RETURN_KEY = "netsci2026.detailReturn";
 const CONFERENCE_YEAR = 2026;
 const CONFERENCE_TIME_ZONE = "America/New_York";
@@ -95,12 +100,9 @@ function parseRoute(): Route {
 
   // Legacy item URLs redirect with drawer open.
   if (["talk", "poster", "session"].includes(parts[0]) && parts[1]) {
-    const item = itemById.get(`${parts[0]}:${parts[1]}`);
-    if (item) {
-      const dayKey = item.dayKey || defaultDayKey();
-      history.replaceState(null, "", `/day/${dayKey}?item=${item.id}`);
-      return { name: "calendar", dayKey };
-    }
+    const itemId = `${parts[0]}:${parts[1]}`;
+    history.replaceState(null, "", `/programs?item=${encodeURIComponent(itemId)}`);
+    return { name: "programs" };
   }
 
   return { name: "calendar", dayKey: defaultDayKey() };

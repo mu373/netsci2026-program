@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CalendarDays, MapPin, UserRound } from "lucide-react";
-import { itemById } from "../../data";
 import {
   cleanRecommendationSummary,
+  displayItemTitle,
   formatChatMarkdown,
   itemMeta,
   localItemSummary,
@@ -13,9 +14,9 @@ import {
   pathForItem,
 } from "../../lib/chatResponse";
 import { pushUrl, rememberDetailReturn, scrollPageToTop } from "../../lib/navigation";
-import { displayTitle } from "../../lib/programHelpers";
 import type { MouseEvent } from "react";
 import type { ProgramRecommendationPayload } from "../../lib/chatResponse";
+import type { ProgramItem } from "../../types";
 
 function openPath(path: string) {
   const url = new URL(path, window.location.origin);
@@ -41,6 +42,20 @@ function openInternalLink(event: MouseEvent<HTMLAnchorElement>, href: string | u
 }
 
 function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
+  const [itemById, setItemById] = useState<Map<string, ProgramItem> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("../../data").then((module) => {
+      if (!cancelled) setItemById(module.itemById);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!itemById) return <div className="notice">Loading recommendations...</div>;
+
   return (
     <div className="programRecommendations">
       {payload.intro && <p className="recommendationIntro">{payload.intro}</p>}
@@ -58,7 +73,7 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
               className="recommendationCard"
               onClick={() => openPath(path)}
             >
-              <span className="recommendationTitle">{displayTitle(item)}</span>
+              <span className="recommendationTitle">{displayItemTitle(item)}</span>
               <span className="recommendationMeta">
                 <span>
                   <CalendarDays size={12} aria-hidden="true" />

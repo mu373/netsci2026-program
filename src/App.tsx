@@ -1,22 +1,39 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ApiDocsPage } from "./components/ApiDocsPage";
-import { CalendarPage } from "./components/CalendarPage";
-import { ChatPage } from "./components/ChatPage";
-import { DetailDrawer } from "./components/DetailDrawer";
-import { PeoplePage } from "./components/PeoplePage";
-import { ProgramsPage } from "./components/ProgramsPage";
 import { TopBar } from "./components/TopBar";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { analyticsEnabled, trackPageView } from "./lib/analytics";
 import { defaultDayKey, pushUrl, useRoute } from "./lib/navigation";
 import { useSavedItems } from "./useSavedItems";
 
+const ApiDocsPage = lazy(() =>
+  import("./components/ApiDocsPage").then((module) => ({ default: module.ApiDocsPage })),
+);
+const CalendarPage = lazy(() =>
+  import("./components/CalendarPage").then((module) => ({ default: module.CalendarPage })),
+);
+const ChatPage = lazy(() =>
+  import("./components/ChatPage").then((module) => ({ default: module.ChatPage })),
+);
+const DetailDrawer = lazy(() =>
+  import("./components/DetailDrawer").then((module) => ({ default: module.DetailDrawer })),
+);
+const PeoplePage = lazy(() =>
+  import("./components/PeoplePage").then((module) => ({ default: module.PeoplePage })),
+);
+const ProgramsPage = lazy(() =>
+  import("./components/ProgramsPage").then((module) => ({ default: module.ProgramsPage })),
+);
+
 type AppConfig = {
   features?: {
     chat?: boolean;
   };
 };
+
+function RouteLoading() {
+  return <div className="notice">Loading...</div>;
+}
 
 function AppFooter({ onAbout, onPrivacy }: { onAbout: () => void; onPrivacy: () => void }) {
   return (
@@ -166,7 +183,11 @@ export default function App() {
   }
 
   if (route.name === "docs") {
-    return <ApiDocsPage />;
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <ApiDocsPage />
+      </Suspense>
+    );
   }
 
   return (
@@ -179,32 +200,44 @@ export default function App() {
       <div className={inlineDetail ? "main withInlineDetail" : "main"}>
         <div className="mainContent">
           <div className={route.name === "chat" ? "routePane" : "routePane hidden"}>
-            {chatEnabled === true && <ChatPage key={chatResetKey} savedItems={saved.savedItems} />}
+            {chatEnabled === true && (
+              <Suspense fallback={<RouteLoading />}>
+                <ChatPage key={chatResetKey} savedItems={saved.savedItems} />
+              </Suspense>
+            )}
           </div>
-          {route.name !== "chat" && <div className="routePane">{main}</div>}
+          {route.name !== "chat" && (
+            <div className="routePane">
+              <Suspense fallback={<RouteLoading />}>{main}</Suspense>
+            </div>
+          )}
           {route.name !== "chat" && (
             <AppFooter onAbout={() => setAboutOpen(true)} onPrivacy={() => setPrivacyOpen(true)} />
           )}
         </div>
         {inlineDetail && openItemId && (
+          <Suspense fallback={null}>
+            <DetailDrawer
+              itemId={openItemId}
+              saved={saved.isSaved(openItemId)}
+              savedRecord={saved.savedById.get(openItemId)}
+              onToggleSaved={saved.toggleSaved}
+              onUpdateSaved={saved.updateSavedItem}
+              variant="inline"
+            />
+          </Suspense>
+        )}
+      </div>
+      {!inlineDetail && openItemId && (
+        <Suspense fallback={null}>
           <DetailDrawer
             itemId={openItemId}
             saved={saved.isSaved(openItemId)}
             savedRecord={saved.savedById.get(openItemId)}
             onToggleSaved={saved.toggleSaved}
             onUpdateSaved={saved.updateSavedItem}
-            variant="inline"
           />
-        )}
-      </div>
-      {!inlineDetail && openItemId && (
-        <DetailDrawer
-          itemId={openItemId}
-          saved={saved.isSaved(openItemId)}
-          savedRecord={saved.savedById.get(openItemId)}
-          onToggleSaved={saved.toggleSaved}
-          onUpdateSaved={saved.updateSavedItem}
-        />
+        </Suspense>
       )}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {privacyOpen && <PrivacyNoticeDialog onClose={() => setPrivacyOpen(false)} />}

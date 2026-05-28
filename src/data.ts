@@ -1,6 +1,13 @@
 import Fuse from "fuse.js";
-import rawData from "./data/program-data.json";
+import programDataUrl from "./data/program-data.json?url";
 import type { AppData, Cluster, ItemClusterAssignment, Person, ProgramItem } from "./types";
+
+const rawData = await fetch(programDataUrl).then((response) => {
+  if (!response.ok) {
+    throw new Error(`Could not load program data: ${response.status}`);
+  }
+  return response.json() as Promise<AppData>;
+});
 
 export const data = rawData as AppData;
 
