@@ -1,0 +1,132 @@
+/* ---------- Shell ---------- */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-height: calc(var(--topbar-height) + var(--safe-top));
+  padding: calc(8px + var(--safe-top)) 14px 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brand strong {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.brand span {
+  font-size: 10px;
+  color: var(--ink-mute);
+  letter-spacing: 0;
+}
+
+.mainTabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px 4px 0 0;
+}
+
+.tabBtn:hover {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.tabBtn:disabled {
+  color: var(--ink-mute);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.tabBtn:disabled:hover {
+  background: transparent;
+}
+
+.tabBtn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.tabBtn:disabled.active {
+  color: var(--ink-mute);
+  border-bottom-color: transparent;
+  font-weight: 500;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 769px) {
+  .topRight {
+    margin-left: auto;
+  }
+}
+
+.calendarPane,
+.programsPane,
+.apiDocsPane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendarPane {
+  padding-top: var(--calendar-day-picker-height);
+}
+
+.apiDocsPane {
+  min-height: 100vh;
+}
+
+.scalarDocsMount {
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--pane);
+}
+
+.notice {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+  color: var(--ink-soft);
+}

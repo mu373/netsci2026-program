@@ -1,0 +1,128 @@
+/* ---------- Save button ---------- */
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  color: var(--ink-mute);
+}
+
+.saveBtn:hover {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.saveBtn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* ---------- Kind tags ---------- */
+
+.kindTag {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  border-radius: 3px;
+}
+
+.kindTag.k-session {
+  background: #e2efe4;
+  color: #2c5734;
+}
+
+.kindTag.k-talk {
+  background: #e3ecf6;
+  color: #234c6f;
+}
+
+.kindTag.k-poster {
+  background: #f4e1ea;
+  color: #762f4f;
+}
+
+.typeTag {
+  font-size: 9px;
+  letter-spacing: 0;
+  color: var(--ink-mute);
+}
+
+.topicChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fafafa;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.topicChip:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.topicsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.topicCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  width: 100%;
+}
+
+.topicCard:hover {
+  background: #fafafa;
+}
+
+.topicCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topicCardHead strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.topicCardHead span {
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.topicCard p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}

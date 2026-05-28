@@ -1,0 +1,237 @@
+.grid {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+}
+
+.gridHeadCell {
+  grid-row: 1;
+  padding: 6px 8px;
+  background: #f4f4f5;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line-soft);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+}
+
+.gridHeadCell:last-child {
+  border-right: 0;
+}
+
+.gridHeadCell.timeHead {
+  background: #ededef;
+}
+
+.timeCell {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 3px 8px;
+  background: #fafafa;
+  border-right: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeCell.hour {
+  border-top: 1px solid var(--line);
+}
+
+.timeCell.half {
+  border-top: 1px dashed var(--line-soft);
+}
+
+.timeCell strong {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.timeCell span {
+  font-size: 10px;
+  color: var(--ink-mute);
+}
+
+.emptyCell {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 8px,
+    #ededef 8px,
+    #ededef 9px
+  );
+  border-right: 1px solid var(--line-soft);
+}
+
+.emptyRow {
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 12px;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 26px 5px 9px;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  background: var(--pane);
+  color: var(--ink);
+  overflow: hidden;
+  box-shadow: inset 4px 0 0 var(--type-color, var(--t-default));
+}
+
+.cell:hover {
+  filter: brightness(0.97);
+}
+
+.cell.type-break {
+  --type-color: var(--t-break);
+  --type-text: #5f5852;
+  background: #f8f5f2;
+}
+
+.cell.type-keynote,
+.cell.type-plenary {
+  --type-color: var(--t-plenary);
+  --type-text: #7a2020;
+  background: #fde9df;
+}
+
+.cell.type-special {
+  --type-color: var(--t-special);
+  --type-text: #3a2e7a;
+  background: #f3f2f8;
+}
+
+.cell.type-parallel {
+  --type-color: var(--t-parallel);
+  --type-text: #10708e;
+  background: #ecf2fa;
+}
+
+.cell.type-satellite {
+  --type-color: var(--t-satellite);
+  --type-text: #0c6664;
+  background: #ebf6f2;
+}
+
+.cell.type-school {
+  --type-color: var(--t-school);
+  --type-text: #6a1515;
+  background: #ffdcdc;
+}
+
+.cell.type-social {
+  --type-color: var(--t-plenary);
+  --type-text: #d42625;
+  background: #f2eeea;
+}
+
+.cell.type-lightning {
+  --type-color: var(--t-lightning);
+  --type-text: #6a4400;
+  background: #fff8e3;
+}
+
+.cell.type-panel {
+  --type-color: var(--t-plenary);
+  --type-text: #d42625;
+  background: #f2eeea;
+}
+
+.cell.type-poster {
+  --type-color: var(--t-poster);
+  --type-text: #24643f;
+  background: #edf7f0;
+}
+
+.cell .saveBtn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.cell.compact {
+  justify-content: center;
+  gap: 0;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.cell.compact .cellTitle {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.cell.compact.withCompactSub .cellTitle {
+  -webkit-line-clamp: 1;
+}
+
+.cellCompactSub {
+  display: block;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell.compact .saveBtn {
+  display: none;
+}
+
+.cellType {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--type-text, var(--type-color, var(--ink-mute)));
+}
+
+.cellTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.cellSub {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.cellMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: auto;
+  font-size: 10px;
+  color: var(--ink-mute);
+}
+
+.locationLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.locationLabel svg {
+  flex: 0 0 auto;
+  stroke-width: 2;
+}

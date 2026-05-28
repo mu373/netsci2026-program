@@ -1,0 +1,264 @@
+.dayPills {
+  position: fixed;
+  top: var(--fixed-topbar-space);
+  left: 0;
+  right: 0;
+  z-index: 8;
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+}
+
+.dayPill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.dayPill strong {
+  font-size: 12px;
+}
+
+.dayPill span {
+  font-size: 10px;
+  color: var(--ink-mute);
+}
+
+.dayPill.active {
+  background: var(--pane);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dayPill.active strong,
+.dayPill.active span {
+  color: var(--accent);
+}
+
+.topControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.searchBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  min-width: 220px;
+}
+
+.searchBox.compact {
+  min-width: 200px;
+}
+
+.searchBox.grow {
+  flex: 1;
+}
+
+.viewSwitch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--pane);
+  align-self: flex-start;
+}
+
+.viewSwitch .kindBtn {
+  border-right: 1px solid var(--line);
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.viewSwitch .kindBtn:last-child {
+  border-right: 0;
+}
+
+.topicHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topicsNote {
+  max-width: 720px;
+  margin: -2px 0 0;
+  color: var(--ink-mute);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.filterBar {
+  --program-control-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBar .kindGroup,
+.filterBar .searchBox,
+.filterBar .savedToggle,
+.filterBar .daySelect {
+  height: var(--program-control-height);
+}
+
+.filterBar .searchBox {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.filterBar .kindBtn,
+.filterBar .savedToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 12px;
+}
+
+.filterBar .kindBtn {
+  height: 100%;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.filterBar .savedToggle {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.daySelect {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  font-size: 12px;
+}
+
+.searchBox input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.kindGroup {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--pane);
+}
+
+.kindBtn {
+  border: 0;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  border-right: 1px solid var(--line);
+}
+
+.kindBtn:last-child {
+  border-right: 0;
+}
+
+.kindBtn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.kindGroup .kindBtn.active {
+  background: #2c2c30;
+  color: #fff;
+}
+
+.savedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  font-size: 11px;
+  color: var(--ink-soft);
+  user-select: none;
+}
+
+.savedToggle input {
+  display: none;
+}
+
+.savedToggle.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.savedToggle em {
+  font-style: normal;
+  color: var(--ink-mute);
+}
+
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.linkBtn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.iconBtn:hover {
+  background: var(--line-soft);
+}
+
+.muted {
+  color: var(--ink-mute);
+}

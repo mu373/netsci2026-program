@@ -1,0 +1,91 @@
+.message-table-wrap {
+  overflow-x: auto;
+}
+
+.message-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.date-col {
+  width: 154px;
+}
+
+.type-col {
+  width: 88px;
+}
+
+.message-col {
+  width: auto;
+}
+
+.message-table th,
+.message-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.message-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.message-table th {
+  background: #fbfdff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.date-cell,
+.type-cell,
+.country,
+details {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.source-freeform {
+  color: oklch(74.6% 0.16 232.661);
+}
+
+.message {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.country {
+  display: inline-block;
+  margin-top: 6px;
+}
+
+details {
+  margin-top: 7px;
+}
+
+summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 3px 10px;
+  margin: 7px 0 0;
+}
+
+dt {
+  color: #475569;
+  font-weight: 400;
+}
+
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

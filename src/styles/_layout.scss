@@ -1,0 +1,107 @@
+/* ---------- Main / Grid ---------- */
+
+.main {
+  flex: 1;
+  padding: calc(var(--topbar-height) + var(--safe-top) + 10px) 14px 24px;
+  min-width: 0;
+}
+
+.main.withInlineDetail {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.main.withInlineDetail .mainContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.appFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-mute);
+  font-size: 11px;
+}
+
+.footerLink {
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.aboutBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(20, 20, 18, 0.28);
+}
+
+.aboutDialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 31;
+  width: min(420px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pane);
+  box-shadow: 0 18px 48px rgba(24, 24, 27, 0.16);
+}
+
+.aboutDialog h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.aboutDialog p {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.aboutDialog .drawerLink {
+  margin-top: 4px;
+}
+
+.privacyDialog {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.routePane.hidden {
+  display: none;
+}
+
+.drawer.inline {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--safe-top) + 10px);
+  right: auto;
+  bottom: auto;
+  width: 580px;
+  max-height: calc(100vh - var(--topbar-height) - var(--safe-top) - 20px);
+  border-left: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  flex-shrink: 0;
+}

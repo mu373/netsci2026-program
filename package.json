@@ -41,6 +41,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "sass": "^1.100.0",
     "tsx": "^4.19.2",
     "wrangler": "^4.95.0"
   }

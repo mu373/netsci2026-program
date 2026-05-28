@@ -1,0 +1,147 @@
+/* ---------- Responsive ---------- */
+
+/* ---------- Mobile card list (programs / per-person) ---------- */
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+  text-align: left;
+}
+
+.itemCard.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.itemCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.itemCardTitle {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.itemCardPresenter {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.itemCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+
+.cardScore {
+  font-variant-numeric: tabular-nums;
+  margin-left: 8px;
+}
+
+.cardSave {
+  display: inline-flex;
+}
+
+/* ---------- Mobile calendar list ---------- */
+
+.mobileDayList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobileSessionCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 42px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cardSave.floating {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+
+.mobileSessionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.mobileTime {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileSessionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.mobileSessionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.typePill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.type-break .typePill { background: #f8f5f2; color: #5f5852; }
+.type-keynote .typePill,
+.type-plenary .typePill { background: #fde9df; color: #7a2020; }
+.type-special .typePill { background: #f3f2f8; color: #3a2e7a; }
+.type-parallel .typePill { background: #ecf2fa; color: #10708e; }
+.type-satellite .typePill { background: #ebf6f2; color: #0c6664; }
+.type-school .typePill { background: #ffdcdc; color: #6a1515; }
+.type-social .typePill { background: #f2eeea; color: #d42625; }
+.type-lightning .typePill { background: #fff8e3; color: #6a4400; }
+.type-panel .typePill { background: #f2eeea; color: #d42625; }
+.type-poster .typePill { background: #edf7f0; color: #24643f; }
