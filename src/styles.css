@@ -2054,14 +2054,6 @@ a {
   line-height: 1.45;
 }
 
-.chatError {
-  padding: 8px 10px;
-  border: 1px solid #efb5ae;
-  border-radius: 4px;
-  background: #fff4f2;
-  color: #8d2b20;
-}
-
 .promptInput {
   position: fixed;
   left: 50%;

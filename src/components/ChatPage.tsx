@@ -125,16 +125,33 @@ function getChatSessionId() {
   return fallback;
 }
 
+function chatErrorMessage(error: Error) {
+  const raw = error.message.trim();
+  const jsonStart = raw.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart)) as { error?: unknown; message?: unknown };
+      const message = parsed.error ?? parsed.message;
+      if (typeof message === "string" && message.trim()) return message.trim();
+    } catch {
+      // Fall back to the SDK error text below.
+    }
+  }
+  return raw || "Something went wrong. Try again in a moment.";
+}
+
 function ChatConversation({
   messages,
   status,
+  error,
   onExample,
 }: {
   messages: ReturnType<typeof useChat>["messages"];
   status: ReturnType<typeof useChat>["status"];
+  error: ReturnType<typeof useChat>["error"];
   onExample: (text: string) => void;
 }) {
-  if (messages.length === 0) {
+  if (messages.length === 0 && !error) {
     return (
       <ConversationEmptyState
         title="Ask about the program"
@@ -164,6 +181,13 @@ function ChatConversation({
         <Message from="assistant">
           <MessageContent>
             <span className="muted">Thinking...</span>
+          </MessageContent>
+        </Message>
+      )}
+      {error && (
+        <Message from="assistant">
+          <MessageContent>
+            <span>{chatErrorMessage(error)}</span>
           </MessageContent>
         </Message>
       )}
@@ -234,10 +258,10 @@ export function ChatPage() {
         <ChatConversation
           messages={messages}
           status={status}
+          error={error}
           onExample={(example) => submitText(example, "template")}
         />
       </Conversation>
-      {error && <div className="chatError">{error.message}</div>}
       <ChatPromptInput
         input={input}
         status={status}

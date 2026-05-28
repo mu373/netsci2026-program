@@ -160,6 +160,9 @@ function openPath(path: string) {
     pushUrl("/chat", params);
     return;
   }
+  if (location.pathname === "/chat" && url.pathname.startsWith("/people/")) {
+    url.searchParams.set("returnTo", "chat");
+  }
   pushUrl(url.pathname, url.searchParams);
   scrollPageToTop();
 }

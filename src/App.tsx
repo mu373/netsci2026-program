@@ -149,6 +149,7 @@ export default function App() {
         slug={route.slug}
         savedById={saved.savedById}
         onToggleSaved={saved.toggleSaved}
+        returnTo={params.get("returnTo") === "chat" ? "chat" : null}
       />
     );
   } else if (route.name === "programs") {

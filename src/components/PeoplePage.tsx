@@ -31,13 +31,17 @@ function PersonDetail({
   slug,
   savedById,
   onToggleSaved,
+  returnTo,
 }: {
   slug: string;
   savedById: Map<string, SavedItem>;
   onToggleSaved: (id: string) => void;
+  returnTo?: "chat" | null;
 }) {
   const { sortKey, sortDir, onSortChange } = useTableSort("day");
   const [relatedHelpOpen, setRelatedHelpOpen] = useState(false);
+  const backLabel = returnTo === "chat" ? "Chat" : "People";
+  const backPath = returnTo === "chat" ? "/chat" : "/people";
   const dayOrderMap = useMemo(() => {
     const map = new Map<string, number>();
     DAYS.forEach((day, i) => map.set(day.key, i));
@@ -64,8 +68,8 @@ function PersonDetail({
   if (!person) {
     return (
       <div className="peoplePane">
-        <button className="backBtn" onClick={() => pushUrl("/people")}>
-          <ChevronLeft size={14} /> People
+        <button className="backBtn" onClick={() => pushUrl(backPath)}>
+          <ChevronLeft size={14} /> {backLabel}
         </button>
         <p className="muted">Person not found.</p>
       </div>
@@ -74,8 +78,8 @@ function PersonDetail({
 
   return (
     <div className="peoplePane personDetailPane">
-      <button className="backBtn" onClick={() => pushUrl("/people")}>
-        <ChevronLeft size={14} /> People
+      <button className="backBtn" onClick={() => pushUrl(backPath)}>
+        <ChevronLeft size={14} /> {backLabel}
       </button>
       <h1>{person.name}</h1>
       <p className="muted">
@@ -120,7 +124,11 @@ function PersonDetail({
               <button
                 key={related.id}
                 className="personCard"
-                onClick={() => pushUrl(`/people/${related.slug}`)}
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (returnTo === "chat") params.set("returnTo", "chat");
+                  pushUrl(`/people/${related.slug}`, params);
+                }}
               >
                 <strong>{related.name}</strong>
                 <span>
@@ -140,10 +148,12 @@ export function PeoplePage({
   slug,
   savedById,
   onToggleSaved,
+  returnTo,
 }: {
   slug?: string;
   savedById: Map<string, SavedItem>;
   onToggleSaved: (id: string) => void;
+  returnTo?: "chat" | null;
 }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -158,7 +168,14 @@ export function PeoplePage({
   }, [slug]);
 
   if (slug) {
-    return <PersonDetail slug={slug} savedById={savedById} onToggleSaved={onToggleSaved} />;
+    return (
+      <PersonDetail
+        slug={slug}
+        savedById={savedById}
+        onToggleSaved={onToggleSaved}
+        returnTo={returnTo}
+      />
+    );
   }
 
   const filtered = searchPeople(debouncedQuery);
