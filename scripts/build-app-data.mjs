@@ -12,6 +12,10 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
 }
 
+function readJsonFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
 function readJsonl(relativePath) {
   const filePath = path.join(root, relativePath);
   if (!fs.existsSync(filePath)) return [];
@@ -28,6 +32,30 @@ function writeJsonl(filePath, records) {
     filePath,
     records.map((record) => JSON.stringify(record)).join("\n") + (records.length ? "\n" : ""),
   );
+}
+
+function withoutGeneratedAt(payload) {
+  const { generatedAt, ...rest } = payload;
+  return rest;
+}
+
+function stableGeneratedAt(payloadWithoutGeneratedAt, fallback = new Date().toISOString()) {
+  if (!fs.existsSync(outPath)) return fallback;
+
+  try {
+    const previousPayload = readJsonFile(outPath);
+    const previousGeneratedAt = previousPayload.generatedAt;
+    if (
+      typeof previousGeneratedAt === "string" &&
+      JSON.stringify(withoutGeneratedAt(previousPayload)) === JSON.stringify(payloadWithoutGeneratedAt)
+    ) {
+      return previousGeneratedAt;
+    }
+  } catch {
+    // Fall through to a fresh timestamp when the existing generated file is unreadable.
+  }
+
+  return fallback;
 }
 
 function compact(value) {
@@ -368,8 +396,7 @@ for (const item of items) {
   };
 }
 
-const payload = {
-  generatedAt: new Date().toISOString(),
+const payloadWithoutGeneratedAt = {
   days,
   items,
   people,
@@ -385,6 +412,10 @@ const payload = {
     centroidCount: 0,
     personVectorCount: personVectorRecords.length,
   },
+};
+const payload = {
+  generatedAt: stableGeneratedAt(payloadWithoutGeneratedAt),
+  ...payloadWithoutGeneratedAt,
 };
 
 fs.mkdirSync(outDir, { recursive: true });

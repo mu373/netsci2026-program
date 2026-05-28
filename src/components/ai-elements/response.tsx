@@ -75,7 +75,7 @@ function MarkdownResponse({
   );
 }
 
-function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
+export function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendationPayload }) {
   const [itemById, setItemById] = useState<Map<string, ProgramItem> | null>(null);
 
   useEffect(() => {

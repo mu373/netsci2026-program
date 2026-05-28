@@ -44,7 +44,7 @@ export function parseProgramRecommendations(text: string): ProgramRecommendation
   for (const candidate of jsonObjectCandidates(unfenced)) {
     try {
       const payload = JSON.parse(candidate) as Record<string, unknown>;
-      const recommendations = normalizeProgramRecommendations(payload);
+      const recommendations = coerceProgramRecommendations(payload);
       if (recommendations) return recommendations;
     } catch {
       // Try the next JSON-looking object in the message.
@@ -52,6 +52,46 @@ export function parseProgramRecommendations(text: string): ProgramRecommendation
   }
 
   return null;
+}
+
+export function stripProgramRecommendationJson(text: string) {
+  let stripped = text;
+  for (const candidate of jsonObjectCandidates(text)) {
+    try {
+      if (coerceProgramRecommendations(JSON.parse(candidate))) {
+        stripped = stripped.replace(candidate, "");
+      }
+    } catch {
+      // Ignore non-JSON candidates.
+    }
+  }
+  return stripped
+    .replace(/```(?:json)?\s*```/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function collapseRepeatedIntro(value: string) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  const colonIndex = cleaned.indexOf(":");
+  if (colonIndex < 0) return cleaned;
+
+  const phrase = cleaned.slice(0, colonIndex + 1).trim();
+  const repeated = `${phrase} ${phrase}`;
+  return cleaned === repeated ? phrase : cleaned;
+}
+
+export function structuredRecommendationIntroText(text: string) {
+  const cleaned = stripProgramRecommendationJson(text);
+  if (!cleaned) return "";
+
+  const firstParagraph = cleaned.split(/\n\s*\n/)[0]?.trim() || "";
+  const firstLine = firstParagraph
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  return firstLine ? collapseRepeatedIntro(firstLine) : "";
 }
 
 function jsonObjectCandidates(text: string) {
@@ -98,11 +138,13 @@ function jsonObjectCandidates(text: string) {
   return candidates;
 }
 
-function normalizeProgramRecommendations(
-  payload: Record<string, unknown>,
-): ProgramRecommendationPayload | null {
-  if (payload.kind !== "program_recommendations" || !Array.isArray(payload.items)) return null;
-  const items = payload.items
+export function coerceProgramRecommendations(payload: unknown): ProgramRecommendationPayload | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  if (record.kind !== "program_recommendations" || !Array.isArray(record.items)) return null;
+  const intro = typeof record.intro === "string" ? record.intro : "";
+  const outro = typeof record.outro === "string" ? record.outro : "";
+  const items = record.items
     .map((entry) => {
       if (!entry || typeof entry !== "object") return null;
       const record = entry as Record<string, unknown>;
@@ -117,9 +159,9 @@ function normalizeProgramRecommendations(
   if (!items.length) return null;
   return {
     kind: "program_recommendations",
-    intro: typeof payload.intro === "string" ? payload.intro : "",
+    intro,
     items,
-    outro: typeof payload.outro === "string" ? payload.outro : "",
+    outro,
   };
 }
 

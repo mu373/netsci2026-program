@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
+  coerceProgramRecommendations,
   formatChatMarkdown,
   looksLikeRecommendationJson,
   parseProgramRecommendations,
   resolveRecommendationId,
+  stripProgramRecommendationJson,
+  structuredRecommendationIntroText,
 } from "./chatResponse";
 
 describe("parseProgramRecommendations", () => {
@@ -57,6 +60,54 @@ describe("parseProgramRecommendations", () => {
 
   test("rejects items-only JSON without the recommendation kind", () => {
     expect(parseProgramRecommendations('{"items":[{"id":"talk:581","summary":"Valid item."}]}')).toBeNull();
+  });
+});
+
+describe("coerceProgramRecommendations", () => {
+  test("normalizes structured tool output", () => {
+    expect(
+      coerceProgramRecommendations({
+        kind: "program_recommendations",
+        intro: "Related sessions:",
+        items: [{ id: "/programs?item=talk%3A581", summary: "Separates topology-driven dynamics from structured random forcing." }],
+      }),
+    ).toEqual({
+      kind: "program_recommendations",
+      intro: "Related sessions:",
+      items: [
+        {
+          id: "talk:581",
+          summary: "Separates topology-driven dynamics from structured random forcing.",
+        },
+      ],
+      outro: "",
+    });
+  });
+});
+
+describe("stripProgramRecommendationJson", () => {
+  test("removes printed recommendation JSON while preserving prose", () => {
+    expect(
+      stripProgramRecommendationJson(`Here are related talks:
+
+{"kind":"program_recommendations","items":[{"id":"talk:581","summary":"Separates spatial operators from noise structure."}]}`),
+    ).toBe("Here are related talks:");
+  });
+});
+
+describe("structuredRecommendationIntroText", () => {
+  test("keeps only the first intro line when structured cards are available", () => {
+    expect(
+      structuredRecommendationIntroText(`I found these talks on GNNs: I found these talks on GNNs:
+
+The Self-Loop Paradox: Investigating the Impact of Self-loops on GNNs
+This talk investigates the impact of self-loops on Graph Neural Networks.
+
+Epidemic Source Detection as a New Benchmark Task for Evaluating GNNs
+This talk proposes using epidemic source detection as a benchmark task.
+
+Would you like to know more about any of these talks?`),
+    ).toBe("I found these talks on GNNs:");
   });
 });
 

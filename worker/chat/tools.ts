@@ -21,6 +21,12 @@ import type {
 } from "../program";
 import type { Cluster, ProgramItem } from "../../src/types";
 
+type ProgramRecommendationInput = {
+  intro?: string;
+  items: { id: string; summary: string }[];
+  outro?: string;
+};
+
 export const chatTools = {
   searchPrograms: tool<
     SearchProgramsInput,
@@ -223,6 +229,69 @@ export const chatTools = {
           .slice(0, 8)
           .map(compactItemSummary),
       })),
+    }),
+  }),
+
+  showProgramRecommendations: tool<
+    ProgramRecommendationInput,
+    {
+      kind: "program_recommendations";
+      intro: string;
+      items: { id: string; summary: string }[];
+      outro: string;
+    }
+  >({
+    description:
+      "Render specific talks, posters, or sessions as program recommendation cards. Use this after writing any concise Markdown intro text, whenever the answer recommends, lists, names, cites, or discusses specific program items.",
+    inputSchema: jsonSchema<ProgramRecommendationInput>({
+      type: "object",
+      properties: {
+        intro: {
+          type: "string",
+          description:
+            "Optional short Markdown intro. Usually leave this empty if you already wrote intro text before calling the tool.",
+        },
+        items: {
+          type: "array",
+          description: "Program items to render as cards.",
+          minItems: 1,
+          maxItems: 8,
+          items: {
+            type: "object",
+            properties: {
+              id: {
+                type: "string",
+                description: "Program item id from retrieved context, such as talk:123, poster:45, or session:w-s1.",
+              },
+              summary: {
+                type: "string",
+                description:
+                  "One short substantive sentence about the work from the abstract or context. Do not restate title, presenter, date, room, or that someone is presenting it.",
+              },
+            },
+            required: ["id", "summary"],
+            additionalProperties: false,
+          },
+        },
+        outro: {
+          type: "string",
+          description: "Optional short Markdown outro or next-step offer.",
+        },
+      },
+      required: ["items"],
+      additionalProperties: false,
+    }),
+    execute: ({ intro = "", items, outro = "" }) => ({
+      kind: "program_recommendations",
+      intro,
+      items: items
+        .map((entry) => ({
+          id: itemById.has(entry.id) ? entry.id : "",
+          summary: entry.summary.trim(),
+        }))
+        .filter((entry) => entry.id && entry.summary)
+        .slice(0, 8),
+      outro,
     }),
   }),
 };
