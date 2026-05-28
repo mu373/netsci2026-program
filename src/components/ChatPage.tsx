@@ -15,6 +15,7 @@ import {
   PromptInputTextarea,
 } from "./ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "./ai-elements/suggestion";
+import type { SavedItem } from "../types";
 
 type MessageSource = "template" | "freeform";
 
@@ -223,7 +224,7 @@ function ChatPromptInput({
   );
 }
 
-export function ChatPage() {
+export function ChatPage({ savedItems }: { savedItems: SavedItem[] }) {
   useKeyboardAwarePrompt();
 
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
@@ -240,6 +241,7 @@ export function ChatPage() {
         body: {
           sessionId,
           messageSource,
+          savedItems,
         },
       },
     );

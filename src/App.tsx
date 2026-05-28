@@ -179,7 +179,7 @@ export default function App() {
       <div className={inlineDetail ? "main withInlineDetail" : "main"}>
         <div className="mainContent">
           <div className={route.name === "chat" ? "routePane" : "routePane hidden"}>
-            {chatEnabled === true && <ChatPage key={chatResetKey} />}
+            {chatEnabled === true && <ChatPage key={chatResetKey} savedItems={saved.savedItems} />}
           </div>
           {route.name !== "chat" && <div className="routePane">{main}</div>}
           {route.name !== "chat" && (
