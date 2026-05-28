@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NetSci 2026">
+  <rect width="512" height="512" rx="112" fill="#d42625"/>
+  <circle cx="170" cy="176" r="34" fill="#ffffff"/>
+  <circle cx="330" cy="150" r="28" fill="#ffffff"/>
+  <circle cx="358" cy="338" r="38" fill="#ffffff"/>
+  <circle cx="148" cy="336" r="30" fill="#ffffff"/>
+  <path d="M184 178 303 154M180 197l152 121M175 333l148 4M154 309l14-101M338 176l18 124" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+  <path d="M136 250h240" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity=".55"/>
+</svg>

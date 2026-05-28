@@ -14,6 +14,7 @@
   --link: #1f5c79;
   --chat-keyboard-inset: 0px;
   --chat-viewport-height: 100vh;
+  --safe-top: env(safe-area-inset-top, 0px);
 
   --t-break: #c8bdb2;
   --t-keynote: #d42625;
@@ -66,6 +67,7 @@ a {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
@@ -79,8 +81,8 @@ a {
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  min-height: var(--topbar-height);
-  padding: 8px 14px;
+  min-height: calc(var(--topbar-height) + var(--safe-top));
+  padding: calc(8px + var(--safe-top)) 14px 8px;
   background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(8px);
@@ -448,7 +450,7 @@ a {
 
 .main {
   flex: 1;
-  padding: calc(var(--topbar-height) + 10px) 14px 24px;
+  padding: calc(var(--topbar-height) + var(--safe-top) + 10px) 14px 24px;
   min-width: 0;
 }
 
@@ -541,11 +543,11 @@ a {
 
 .drawer.inline {
   position: sticky;
-  top: calc(var(--topbar-height) + 10px);
+  top: calc(var(--topbar-height) + var(--safe-top) + 10px);
   right: auto;
   bottom: auto;
   width: 580px;
-  max-height: calc(100vh - var(--topbar-height) - 20px);
+  max-height: calc(100vh - var(--topbar-height) - var(--safe-top) - 20px);
   border-left: 0;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -2174,11 +2176,11 @@ a {
   }
 
   .main {
-    padding: calc(var(--topbar-height) + 8px) 10px 24px;
+    padding: calc(var(--topbar-height) + var(--safe-top) + 8px) 10px 24px;
   }
 
   .topBar {
-    padding: 14px 10px 6px;
+    padding: calc(14px + var(--safe-top)) 10px 6px;
     gap: 0 6px;
     align-items: stretch;
   }

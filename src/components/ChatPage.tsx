@@ -46,12 +46,11 @@ function useKeyboardAwarePrompt() {
         return;
       }
 
-      const viewportShrink = Math.max(0, window.innerHeight - viewport.height);
       const layoutOverlap = Math.max(
         0,
         window.innerHeight - viewport.height - viewport.offsetTop,
       );
-      const keyboardInset = Math.max(viewportShrink, layoutOverlap);
+      const keyboardInset = layoutOverlap;
       const activeInset =
         promptFocused || keyboardInset > KEYBOARD_INSET_THRESHOLD ? keyboardInset : 0;
 
