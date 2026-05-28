@@ -14,6 +14,13 @@ export const itemById = new Map(data.items.map((item) => [item.id, item]));
 export const personBySlug = new Map(data.people.map((person) => [person.slug, person]));
 export const clusterById = new Map(data.clusters.map((cluster) => [cluster.id, cluster]));
 
+type ProgramSearchRow = {
+  item: ProgramItem;
+  text: string;
+  titleText: string;
+  recommendationBoost: number;
+};
+
 const peopleFuse = new Fuse(data.people, {
   keys: [
     { name: "name", weight: 3 },
@@ -61,34 +68,97 @@ function textForSearch(item: ProgramItem) {
     .toLocaleLowerCase();
 }
 
-export function searchItems(query: string, limit = 12) {
-  const normalizedQuery = query.toLocaleLowerCase().trim();
-  const terms = [
+function searchTerms(query: string) {
+  return [
     ...new Set(
-      normalizedQuery
-        .toLocaleLowerCase()
+      query
         .split(/[^a-z0-9]+/)
         .filter((term) => term.length > 1),
     ),
   ];
+}
 
-  const candidates = terms.length
-    ? data.items
-        .map((item) => {
-          const text = textForSearch(item);
-          const hits = terms.reduce((count, term) => count + (text.includes(term) ? 1 : 0), 0);
-          const titleHits = terms.reduce(
-            (count, term) => count + (item.title.toLocaleLowerCase().includes(term) ? 2 : 0),
-            0,
-          );
-          const exactPhraseBoost = normalizedQuery && text.includes(normalizedQuery) ? 6 : 0;
-          const recommendationBoost = item.ranking ? Math.max(0, item.ranking.score - 0.72) * 4 : 0;
-          return { item, score: hits + titleHits + exactPhraseBoost + recommendationBoost };
-        })
-        .filter((entry) => entry.score > 0)
-    : data.items
-        .filter((item) => item.ranking)
-        .map((item) => ({ item, score: item.ranking?.score || 0 }));
+function topicItemScore(item: ProgramItem, topicId: number) {
+  const assignment = data.clusterByItem[item.id];
+  if (!assignment || assignment.primary !== topicId) return null;
+  return assignment.top.find((entry) => entry.clusterId === topicId)?.score ?? 0;
+}
+
+const searchableItems: ProgramSearchRow[] = data.items.map((item) => ({
+  item,
+  text: textForSearch(item),
+  titleText: item.title.toLocaleLowerCase(),
+  recommendationBoost: item.ranking ? Math.max(0, item.ranking.score - 0.72) * 4 : 0,
+}));
+
+const rankedItemResults = data.items
+  .filter((item) => item.ranking)
+  .map((item) => ({ item, score: item.ranking?.score || 0 }))
+  .sort((a, b) => b.score - a.score);
+
+const popularPeopleResults = [...data.people]
+  .sort((a, b) => b.itemIds.length - a.itemIds.length || a.name.localeCompare(b.name))
+  .map((person) => ({ person, score: 1 }));
+
+const topicItemCounts = new Map<number, number>();
+for (const assignment of Object.values(data.clusterByItem)) {
+  topicItemCounts.set(assignment.primary, (topicItemCounts.get(assignment.primary) || 0) + 1);
+}
+
+const topicSummaryRows = data.clusters.map((topic) => ({
+  ...topic,
+  itemCount: topicItemCounts.get(topic.id) || 0,
+}));
+
+const topicSearchRows = topicSummaryRows.map((topic) => ({
+  topic,
+  text: `${topic.label} ${topic.description}`.toLocaleLowerCase(),
+}));
+
+const itemsByTopic = new Map<number, { item: ProgramItem; score: number }[]>();
+for (const topic of data.clusters) {
+  const topicItems = data.items
+    .map((item) => {
+      const score = topicItemScore(item, topic.id);
+      return score === null ? null : { item, score };
+    })
+    .filter((entry): entry is { item: ProgramItem; score: number } => Boolean(entry))
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        (a.item.startH ?? 99) - (b.item.startH ?? 99) ||
+        a.item.title.localeCompare(b.item.title),
+    );
+  itemsByTopic.set(topic.id, topicItems);
+}
+
+const relatedItemsById = new Map<string, { score: number; item: ProgramItem }[]>(
+  Object.entries(data.related).map(([id, related]) => [
+    id,
+    related
+      .map((entry) => ({ score: entry.score, item: itemById.get(entry.id) }))
+      .filter((entry): entry is { score: number; item: ProgramItem } => Boolean(entry.item)),
+  ]),
+);
+
+export function searchItems(query: string, limit = 12) {
+  const normalizedQuery = query.toLocaleLowerCase().trim();
+  const terms = searchTerms(normalizedQuery);
+
+  if (!terms.length) return rankedItemResults.slice(0, limit);
+
+  const candidates: { item: ProgramItem; score: number }[] = [];
+  for (const { item, text, titleText, recommendationBoost } of searchableItems) {
+    let hits = 0;
+    let titleHits = 0;
+    for (const term of terms) {
+      if (text.includes(term)) hits += 1;
+      if (titleText.includes(term)) titleHits += 2;
+    }
+    const exactPhraseBoost = normalizedQuery && text.includes(normalizedQuery) ? 6 : 0;
+    const score = hits + titleHits + exactPhraseBoost + recommendationBoost;
+    if (score > 0) candidates.push({ item, score });
+  }
 
   return candidates.sort((a, b) => b.score - a.score).slice(0, limit);
 }
@@ -96,10 +166,7 @@ export function searchItems(query: string, limit = 12) {
 export function searchPeople(query: string, limit = 12) {
   const trimmed = query.trim();
   if (!trimmed) {
-    return [...data.people]
-      .sort((a, b) => b.itemIds.length - a.itemIds.length || a.name.localeCompare(b.name))
-      .slice(0, limit)
-      .map((person) => ({ person, score: 1 }));
+    return popularPeopleResults.slice(0, limit);
   }
   return peopleFuse.search(trimmed, { limit }).map((result) => ({
     person: result.item,
@@ -199,36 +266,18 @@ export function compactRelatedItems(itemId: string, limit: number) {
     }));
 }
 
-function topicItemScore(item: ProgramItem, topicId: number) {
-  const assignment = data.clusterByItem[item.id];
-  if (!assignment || assignment.primary !== topicId) return null;
-  return assignment.top.find((entry) => entry.clusterId === topicId)?.score ?? 0;
-}
-
 export function topicSummaries() {
-  const counts = new Map<number, number>();
-  for (const assignment of Object.values(data.clusterByItem)) {
-    counts.set(assignment.primary, (counts.get(assignment.primary) || 0) + 1);
-  }
-  return data.clusters.map((topic) => ({
-    ...topic,
-    itemCount: counts.get(topic.id) || 0,
-  }));
+  return topicSummaryRows.slice();
 }
 
 export function searchTopicSummaries(query: string, limit: number) {
-  const terms = query
-    .toLocaleLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((term) => term.length > 1);
-  const topics = topicSummaries();
-  if (!terms.length) return topics.slice(0, limit);
-  return topics
-    .map((topic) => {
-      const text = `${topic.label} ${topic.description}`.toLocaleLowerCase();
-      const score = terms.reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0);
-      return { topic, score };
-    })
+  const terms = searchTerms(query.toLocaleLowerCase());
+  if (!terms.length) return topicSummaryRows.slice(0, limit);
+  return topicSearchRows
+    .map(({ topic, text }) => ({
+      topic,
+      score: terms.reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0),
+    }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score || b.topic.itemCount - a.topic.itemCount)
     .slice(0, limit)
@@ -236,19 +285,7 @@ export function searchTopicSummaries(query: string, limit: number) {
 }
 
 export function itemsForTopic(topicId: number, limit: number) {
-  return data.items
-    .map((item) => {
-      const score = topicItemScore(item, topicId);
-      return score === null ? null : { item, score };
-    })
-    .filter((entry): entry is { item: ProgramItem; score: number } => Boolean(entry))
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        (a.item.startH ?? 99) - (b.item.startH ?? 99) ||
-        a.item.title.localeCompare(b.item.title),
-    )
-    .slice(0, limit);
+  return (itemsByTopic.get(topicId) || []).slice(0, limit);
 }
 
 export function pathForItem(item: ProgramItem) {
@@ -289,7 +326,5 @@ export function contextForQuery(query: string) {
 }
 
 export function relatedFor(id: string) {
-  return (data.related[id] || [])
-    .map((entry) => ({ score: entry.score, item: itemById.get(entry.id) }))
-    .filter((entry): entry is { score: number; item: ProgramItem } => Boolean(entry.item));
+  return relatedItemsById.get(id)?.slice() || [];
 }

@@ -2,9 +2,9 @@ import { CalendarPlus, ChevronDown, ChevronLeft, ExternalLink, X } from "lucide-
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   itemById,
-  items,
   peopleForItem,
   relatedItems,
+  sessionPosters,
   sessionTalks,
   topicsForItem,
 } from "../data";
@@ -87,10 +87,7 @@ export function DetailDrawer({
   if (!item) return null;
 
   const talks = item.kind === "session" ? sessionTalks(item.sourceId) : [];
-  const posters =
-    item.kind === "session"
-      ? items.filter((other) => other.kind === "poster" && other.sessionId === item.sourceId)
-      : [];
+  const posters = item.kind === "session" ? sessionPosters(item.sourceId) : [];
   const related = relatedItems(item.id).slice(0, 10);
   const sessionChair =
     item.kind === "session" && item.chair ? item.chair.replace(/\s*;\s*/g, ", ") : "";

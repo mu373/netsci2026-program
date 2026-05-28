@@ -129,7 +129,7 @@ app.get("/api/related", (c) => {
 
 app.get("/api/search", (c) => {
   const query = c.req.query("q") || "";
-  const limit = Number(c.req.query("limit") || 12);
+  const limit = limitParam(c.req.query("limit"), 12, 100);
   return c.json({ query, results: searchItems(query, limit) });
 });
 

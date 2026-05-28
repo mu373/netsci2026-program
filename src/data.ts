@@ -15,12 +15,31 @@ export const clusterById = new Map<number, Cluster>(
   clusters.map((cluster) => [cluster.id, cluster]),
 );
 
+function sortByRankThenTitle(a: ProgramItem, b: ProgramItem) {
+  const rankA = a.ranking?.rank || 9999;
+  const rankB = b.ranking?.rank || 9999;
+  if (rankA !== rankB) return rankA - rankB;
+  return a.title.localeCompare(b.title);
+}
+
+function groupedBy<K, T>(rows: T[], keyFor: (row: T) => K | null | undefined) {
+  const map = new Map<K, T[]>();
+  for (const row of rows) {
+    const key = keyFor(row);
+    if (key == null) continue;
+    const group = map.get(key);
+    if (group) group.push(row);
+    else map.set(key, [row]);
+  }
+  return map;
+}
+
 export function clusterForItem(itemId: string): ItemClusterAssignment | undefined {
   return data.clusterByItem[itemId];
 }
 
 const TOPIC_DELTA = 0.07;
-export function topicsForItem(itemId: string): { cluster: Cluster; score: number }[] {
+function buildTopicsForItem(itemId: string): { cluster: Cluster; score: number }[] {
   const assign = data.clusterByItem[itemId];
   if (!assign) return [];
   const ranked = [...assign.top].sort((a, b) => b.score - a.score);
@@ -41,13 +60,62 @@ export function topicsForItem(itemId: string): { cluster: Cluster; score: number
   return out;
 }
 
+const topicsByItem = new Map(
+  Object.keys(data.clusterByItem).map((itemId) => [itemId, buildTopicsForItem(itemId)]),
+);
+
+export function topicsForItem(itemId: string): { cluster: Cluster; score: number }[] {
+  return topicsByItem.get(itemId)?.slice() || [];
+}
+
+const itemsByPrimaryCluster = groupedBy(items, (item) => data.clusterByItem[item.id]?.primary);
+
 export function itemsInCluster(clusterId: number): ProgramItem[] {
-  return items.filter((item) => data.clusterByItem[item.id]?.primary === clusterId);
+  return itemsByPrimaryCluster.get(clusterId)?.slice() || [];
 }
 
 export const rankedItems = items
   .filter((item) => item.ranking)
   .sort((a, b) => (a.ranking?.rank || 9999) - (b.ranking?.rank || 9999));
+
+const talksBySessionId = groupedBy(
+  items.filter((item) => item.kind === "talk"),
+  (item) => item.sessionId,
+);
+for (const talks of talksBySessionId.values()) {
+  talks.sort((a, b) => (a.talkIndex ?? 0) - (b.talkIndex ?? 0));
+}
+
+const postersBySessionId = groupedBy(
+  items.filter((item) => item.kind === "poster"),
+  (item) => item.sessionId,
+);
+for (const posters of postersBySessionId.values()) {
+  posters.sort((a, b) => (a.posterNum ?? 9999) - (b.posterNum ?? 9999) || a.title.localeCompare(b.title));
+}
+
+const relatedItemsById = new Map<string, { item: ProgramItem; score: number }[]>(
+  Object.entries(data.related).map(([itemId, related]) => [
+    itemId,
+    related
+      .map((entry) => ({ item: itemById.get(entry.id), score: entry.score }))
+      .filter((entry): entry is { item: ProgramItem; score: number } => Boolean(entry.item)),
+  ]),
+);
+
+const itemsByPersonSlug = new Map<string, ProgramItem[]>(
+  people.map((person) => [
+    person.slug,
+    person.itemIds
+      .map((id) => itemById.get(id))
+      .filter((item): item is ProgramItem => Boolean(item))
+      .sort(sortByRankThenTitle),
+  ]),
+);
+
+const popularPeople = [...people].sort(
+  (a, b) => b.itemIds.length - a.itemIds.length || a.name.localeCompare(b.name),
+);
 
 export function itemUrl(item: ProgramItem) {
   if (item.kind === "talk") return `/talk/${item.sourceId}`;
@@ -61,15 +129,15 @@ export function resolveItemFromPath(kind: string, id: string | undefined) {
 }
 
 export function sessionTalks(sessionId: string) {
-  return items
-    .filter((item) => item.kind === "talk" && item.sessionId === sessionId)
-    .sort((a, b) => (a.talkIndex ?? 0) - (b.talkIndex ?? 0));
+  return talksBySessionId.get(sessionId)?.slice() || [];
+}
+
+export function sessionPosters(sessionId: string) {
+  return postersBySessionId.get(sessionId)?.slice() || [];
 }
 
 export function relatedItems(itemId: string) {
-  return (data.related[itemId] || [])
-    .map((related) => ({ item: itemById.get(related.id), score: related.score }))
-    .filter((entry): entry is { item: ProgramItem; score: number } => Boolean(entry.item));
+  return relatedItemsById.get(itemId)?.slice() || [];
 }
 
 export function peopleForItem(itemId: string) {
@@ -77,17 +145,7 @@ export function peopleForItem(itemId: string) {
 }
 
 export function itemsForPerson(personSlug: string) {
-  const person = personBySlug.get(personSlug);
-  if (!person) return [];
-  return person.itemIds
-    .map((id) => itemById.get(id))
-    .filter((item): item is ProgramItem => Boolean(item))
-    .sort((a, b) => {
-      const rankA = a.ranking?.rank || 9999;
-      const rankB = b.ranking?.rank || 9999;
-      if (rankA !== rankB) return rankA - rankB;
-      return a.title.localeCompare(b.title);
-    });
+  return itemsByPersonSlug.get(personSlug)?.slice() || [];
 }
 
 export function relatedPeopleForPerson(personId: string) {
@@ -123,7 +181,7 @@ const peopleFuse = new Fuse(people, {
 export function searchPeople(query: string, limit = people.length) {
   const trimmed = query.trim();
   if (!trimmed) {
-    return [...people].sort((a, b) => b.itemIds.length - a.itemIds.length).slice(0, limit);
+    return popularPeople.slice(0, limit);
   }
   return peopleFuse.search(trimmed, { limit }).map((result) => result.item);
 }
