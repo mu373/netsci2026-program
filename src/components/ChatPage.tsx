@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -27,6 +27,71 @@ const EXAMPLES = [
   "Find presentations by a speaker.",
   "Suggest items related to temporal networks.",
 ];
+
+const KEYBOARD_INSET_THRESHOLD = 80;
+
+function useKeyboardAwarePrompt() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateTimers = new Set<number>();
+
+    const updateViewportVars = () => {
+      const viewport = window.visualViewport;
+      const focusedElement = document.activeElement;
+      const promptFocused =
+        focusedElement instanceof HTMLElement && Boolean(focusedElement.closest(".promptInput"));
+
+      if (!viewport) {
+        root.style.setProperty("--chat-keyboard-inset", "0px");
+        return;
+      }
+
+      const viewportShrink = Math.max(0, window.innerHeight - viewport.height);
+      const layoutOverlap = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+      const keyboardInset = Math.max(viewportShrink, layoutOverlap);
+      const activeInset =
+        promptFocused || keyboardInset > KEYBOARD_INSET_THRESHOLD ? keyboardInset : 0;
+
+      root.style.setProperty("--chat-viewport-height", `${Math.round(viewport.height)}px`);
+      root.style.setProperty("--chat-keyboard-inset", `${Math.round(activeInset)}px`);
+    };
+
+    const scheduleUpdate = () => {
+      updateViewportVars();
+      [40, 140, 320].forEach((delay) => {
+        const timer = window.setTimeout(() => {
+          updateTimers.delete(timer);
+          updateViewportVars();
+        }, delay);
+        updateTimers.add(timer);
+      });
+    };
+
+    updateViewportVars();
+
+    window.addEventListener("resize", updateViewportVars);
+    window.addEventListener("focusin", scheduleUpdate);
+    window.addEventListener("focusout", scheduleUpdate);
+    document.addEventListener("input", scheduleUpdate, true);
+    window.visualViewport?.addEventListener("resize", updateViewportVars);
+    window.visualViewport?.addEventListener("scroll", updateViewportVars);
+
+    return () => {
+      updateTimers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("resize", updateViewportVars);
+      window.removeEventListener("focusin", scheduleUpdate);
+      window.removeEventListener("focusout", scheduleUpdate);
+      document.removeEventListener("input", scheduleUpdate, true);
+      window.visualViewport?.removeEventListener("resize", updateViewportVars);
+      window.visualViewport?.removeEventListener("scroll", updateViewportVars);
+      root.style.removeProperty("--chat-keyboard-inset");
+      root.style.removeProperty("--chat-viewport-height");
+    };
+  }, []);
+}
 
 function makeSessionId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -136,6 +201,8 @@ function ChatPromptInput({
 }
 
 export function ChatPage() {
+  useKeyboardAwarePrompt();
+
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
   const { messages, sendMessage, status, stop, error } = useChat({ transport });
   const [sessionId] = useState(getChatSessionId);
