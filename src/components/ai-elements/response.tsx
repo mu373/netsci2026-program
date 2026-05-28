@@ -205,6 +205,31 @@ function parseProgramRecommendations(text: string): ProgramRecommendationPayload
   }
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function markdownToPlainText(value: string) {
+  return value
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[`*_~]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanRecommendationSummary(value: string, item: ProgramItem | undefined) {
+  let cleaned = markdownToPlainText(value)
+    .replace(/^[\s:;,.!?-]+/, "")
+    .trim();
+
+  if (item) {
+    const titlePattern = new RegExp(`^${escapeRegExp(displayTitle(item))}\\s*(?::|[-–—])?\\s*`, "i");
+    cleaned = cleaned.replace(titlePattern, "").trim();
+  }
+
+  return cleaned;
+}
+
 function parseProgramReferenceList(text: string): ProgramRecommendationPayload | null {
   const lines = text.split(/\n+/);
   const refs: { id: string; summary: string; lineIndex: number }[] = [];
@@ -217,9 +242,8 @@ function parseProgramReferenceList(text: string): ProgramRecommendationPayload |
     const cleaned = line
       .replace(/\b(?:talk|poster|session):[A-Za-z0-9_-]+\b/g, "")
       .replace(/^[\s>*-]*(?:\d+\.)?\s*/, "")
-      .replace(/[`()[\]]/g, "")
       .trim();
-    const summary = item && cleaned.toLocaleLowerCase() === displayTitle(item).toLocaleLowerCase() ? "" : cleaned;
+    const summary = cleanRecommendationSummary(cleaned, item);
     refs.push({
       id,
       summary,
@@ -296,7 +320,7 @@ function ProgramRecommendationCards({ payload }: { payload: ProgramRecommendatio
           if (!item) return null;
           const path = pathForItem(item);
           const meta = itemMeta(item);
-          const summary = entry.summary?.trim() || localItemSummary(item);
+          const summary = cleanRecommendationSummary(entry.summary || "", item) || localItemSummary(item);
           return (
             <button
               type="button"
