@@ -10,8 +10,57 @@ export type Route =
 
 export const DAYS = data.days.all;
 const DETAIL_RETURN_KEY = "netsci2026.detailReturn";
+const CONFERENCE_YEAR = 2026;
+const CONFERENCE_TIME_ZONE = "America/New_York";
+const MONTHS: Record<string, number> = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+};
+
+function bostonDateParts() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CONFERENCE_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date());
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value),
+    month: Number(parts.find((part) => part.type === "month")?.value),
+    day: Number(parts.find((part) => part.type === "day")?.value),
+  };
+}
+
+function dayDateParts(date: string) {
+  const match = date.match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+  if (!match) return null;
+  const month = MONTHS[match[1].toLocaleLowerCase()];
+  const day = Number(match[2]);
+  if (!month || !Number.isFinite(day)) return null;
+  return { month, day };
+}
 
 export function defaultDayKey() {
+  const today = bostonDateParts();
+  if (today.year === CONFERENCE_YEAR) {
+    const currentDay = DAYS.find((day) => {
+      const date = dayDateParts(day.date);
+      return date?.month === today.month && date.day === today.day;
+    });
+    if (currentDay) return currentDay.key;
+  }
+
   return DAYS[0]?.key ?? "";
 }
 
