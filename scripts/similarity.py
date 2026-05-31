@@ -509,6 +509,8 @@ def reusable_vector(
     vector = record.get("vector")
     if record.get("dimensions") != dimensions or not isinstance(vector, list) or len(vector) != dimensions:
         return None
+    if record.get("text") != doc["text"]:
+        return None
     return record
 
 

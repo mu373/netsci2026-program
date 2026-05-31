@@ -26,7 +26,7 @@ const EXAMPLES = [
   "Who works on science of science?",
   "Are there talks on GNNs?",
   "Find presentations by a speaker.",
-  "Suggest items related to temporal networks.",
+  "Is there any work on epidemics and mobility?",
 ];
 
 const KEYBOARD_INSET_THRESHOLD = 80;

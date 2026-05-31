@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { convertToModelMessages, stepCountIs, streamText } from "ai";
 import { describe, expect, test } from "vitest";
-import { chatTools } from "./tools";
+import { chatToolsForApiKey } from "./tools";
 import { normalizeSavedItems, systemPromptForChat } from "./prompt";
 import { itemById } from "../program";
 import type { UIMessage } from "ai";
@@ -31,7 +31,7 @@ async function runChat(query: string): Promise<ChatShape> {
     model: google("gemini-2.5-flash"),
     system: systemPromptForChat(query, normalizeSavedItems([])),
     messages: await convertToModelMessages(messages),
-    tools: chatTools,
+    tools: chatToolsForApiKey(apiKey),
     stopWhen: stepCountIs(4),
     temperature: 0,
   });

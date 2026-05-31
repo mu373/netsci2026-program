@@ -8,7 +8,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { Scalar } from "@scalar/hono-api-reference";
 import { openApiSpec } from "./openapi";
-import { chatTools } from "./chat/tools";
+import { chatToolsForApiKey } from "./chat/tools";
 import {
   isPromptInjectionAttempt,
   lastUserMessage,
@@ -26,6 +26,7 @@ import {
   clusterById,
   data,
   findPeopleByTopic,
+  findPeopleByTopicVector,
   itemById,
   itemId,
   resolveItem,
@@ -34,6 +35,7 @@ import {
   personBySlug,
   relatedFor,
   searchItems,
+  searchItemsVector,
   searchPeople,
   topicSummaries,
 } from "./program";
@@ -107,10 +109,16 @@ app.get("/api/people/search", (c) => {
   return c.json({ query, results: searchPeople(query, limit) });
 });
 
-app.get("/api/people/by-topic", (c) => {
+app.get("/api/people/by-topic", async (c) => {
   const query = c.req.query("q") || "";
   const limit = limitParam(c.req.query("limit"), 10, 100);
-  return c.json({ query, results: findPeopleByTopic(query, limit) });
+  const apiKey = chatApiKey(c.env);
+  return c.json({
+    query,
+    results: apiKey
+      ? await findPeopleByTopicVector(query, apiKey, limit)
+      : findPeopleByTopic(query, limit),
+  });
 });
 
 app.get("/api/people/:slug", (c) => {
@@ -128,10 +136,14 @@ app.get("/api/related", (c) => {
   return c.json({ item: itemById.get(id), related: relatedFor(id) });
 });
 
-app.get("/api/search", (c) => {
+app.get("/api/search", async (c) => {
   const query = c.req.query("q") || "";
   const limit = limitParam(c.req.query("limit"), 12, 100);
-  return c.json({ query, results: searchItems(query, limit) });
+  const apiKey = chatApiKey(c.env);
+  return c.json({
+    query,
+    results: apiKey ? await searchItemsVector(query, apiKey, limit) : searchItems(query, limit),
+  });
 });
 
 app.post("/api/chat", async (c) => {
@@ -169,7 +181,7 @@ app.post("/api/chat", async (c) => {
     model: google("gemini-2.5-flash"),
     system: systemPromptForChat(query, savedItems),
     messages: await convertToModelMessages(messages),
-    tools: chatTools,
+    tools: chatToolsForApiKey(apiKey),
     stopWhen: stepCountIs(4),
   });
 

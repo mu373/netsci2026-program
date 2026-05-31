@@ -4,10 +4,12 @@ import {
   compactItemSummary,
   compactRelatedItems,
   findPeopleByTopic,
+  findPeopleByTopicVector,
   itemById,
   itemsForTopic,
   limitNumber,
   searchItems,
+  searchItemsVector,
   searchPeople,
   searchTopicSummaries,
 } from "../program";
@@ -27,7 +29,8 @@ type ProgramRecommendationInput = {
   outro?: string;
 };
 
-export const chatTools = {
+export function chatToolsForApiKey(apiKey = "") {
+  return {
   searchPrograms: tool<
     SearchProgramsInput,
     {
@@ -36,7 +39,7 @@ export const chatTools = {
     }
   >({
     description:
-      "Search all program items with local lexical search, including breaks, meals, titles, abstracts, people, day, time, and room. Use this for general schedule questions such as lunch, coffee, registration, rooms, dates, and keyword searches.",
+      "Search all program items with semantic vector search blended with lexical matching, including breaks, meals, titles, abstracts, people, day, time, and room. Use this for general schedule questions such as lunch, coffee, registration, rooms, dates, and topical searches.",
     inputSchema: jsonSchema<SearchProgramsInput>({
       type: "object",
       properties: {
@@ -52,9 +55,9 @@ export const chatTools = {
       required: ["query"],
       additionalProperties: false,
     }),
-    execute: ({ query, limit }) => ({
+    execute: async ({ query, limit }) => ({
       query,
-      results: searchItems(query, limitNumber(limit, 12, 40)).map(({ item, score }) => ({
+      results: (await searchItemsVector(query, apiKey, limitNumber(limit, 12, 40))).map(({ item, score }) => ({
         ...compactItemSummary(item),
         searchScore: score,
       })),
@@ -170,9 +173,9 @@ export const chatTools = {
       required: ["query"],
       additionalProperties: false,
     }),
-    execute: ({ query, limit }) => ({
+    execute: async ({ query, limit }) => ({
       query,
-      results: findPeopleByTopic(query, limitNumber(limit, 10, 30)),
+      results: await findPeopleByTopicVector(query, apiKey, limitNumber(limit, 10, 30)),
     }),
   }),
 
@@ -294,4 +297,7 @@ export const chatTools = {
       outro,
     }),
   }),
-};
+  };
+}
+
+export const chatTools = chatToolsForApiKey();
