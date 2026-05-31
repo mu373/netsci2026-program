@@ -8,6 +8,8 @@ import type { ProgramItem } from "../../types";
 const recommendedTalk: ProgramItem = {
   id: "talk:581",
   sourceId: "581",
+  sourceKey: "talk:581",
+  fingerprint: "test-fingerprint",
   kind: "talk",
   title: "Disentangling Spatial and Noise Structures in Network Processes",
   abstract: "Separates deterministic dynamics from structured random forcing.",

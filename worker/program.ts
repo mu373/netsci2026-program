@@ -11,6 +11,7 @@ export type FindPeopleByTopicInput = { query: string; limit?: number };
 
 export const data = programData as AppData;
 export const itemById = new Map(data.items.map((item) => [item.id, item]));
+export const itemBySourceKey = new Map(data.items.map((item) => [item.sourceKey, item]));
 export const personBySlug = new Map(data.people.map((person) => [person.slug, person]));
 export const clusterById = new Map(data.clusters.map((cluster) => [cluster.id, cluster]));
 
@@ -45,6 +46,11 @@ export function limitNumber(value: number | undefined, fallback: number, max: nu
 
 export function itemId(kind: string, id: string) {
   return `${kind}:${id}`;
+}
+
+export function resolveItem(kind: string, id: string) {
+  const key = itemId(kind, id);
+  return itemById.get(key) || itemById.get(data.itemAliases?.[key] || "") || itemBySourceKey.get(key) || null;
 }
 
 function textForSearch(item: ProgramItem) {

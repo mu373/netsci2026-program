@@ -28,6 +28,7 @@ import {
   findPeopleByTopic,
   itemById,
   itemId,
+  resolveItem,
   itemsForTopic,
   limitParam,
   personBySlug,
@@ -83,7 +84,7 @@ app.get("/api/program", (c) =>
 );
 
 app.get("/api/item/:kind/:id", (c) => {
-  const item = itemById.get(itemId(c.req.param("kind"), c.req.param("id")));
+  const item = resolveItem(c.req.param("kind"), c.req.param("id"));
   if (!item) return c.json({ error: "Item not found" }, 404);
   return c.json({ item, people: data.peopleByItem[item.id] || [], related: relatedFor(item.id) });
 });

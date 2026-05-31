@@ -1,12 +1,49 @@
 import { useCallback, useMemo, useState } from "react";
+import { itemAliases, itemById } from "./data";
 import type { SavedItem } from "./types";
 
 const SAVED_KEY = "netsci2026.savedItems";
 
+function snapshotForItem(itemId: string): SavedItem["snapshot"] | undefined {
+  const item = itemById.get(itemId);
+  if (!item) return undefined;
+  return {
+    id: item.id,
+    sourceId: item.sourceId,
+    sourceKey: item.sourceKey,
+    fingerprint: item.fingerprint,
+    title: item.title,
+    kind: item.kind,
+  };
+}
+
+function migrateSavedItems(items: SavedItem[]) {
+  const migrated = [...items];
+  const seen = new Set(migrated.map((item) => item.itemId));
+
+  for (const item of items) {
+    const alias = itemAliases[item.itemId];
+    if (!alias || seen.has(alias)) continue;
+    migrated.push({
+      ...item,
+      itemId: alias,
+      migratedFrom: item.itemId,
+      snapshot: snapshotForItem(alias),
+    });
+    seen.add(alias);
+  }
+
+  return migrated;
+}
+
 function readSaved(): SavedItem[] {
   try {
     const raw = localStorage.getItem(SAVED_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    const migrated = migrateSavedItems(parsed);
+    if (migrated.length !== parsed.length) writeSaved(migrated);
+    return migrated;
   } catch {
     return [];
   }
@@ -35,6 +72,7 @@ export function useSavedItems() {
           itemId,
           savedAt: new Date().toISOString(),
           status: "interested",
+          snapshot: snapshotForItem(itemId),
         },
       ]);
     },

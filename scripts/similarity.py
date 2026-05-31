@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -80,8 +82,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-file", type=Path, default=env_file)
     parser.add_argument("--data", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_DIR)
+    parser.add_argument("--previous-app-data", type=Path, default=Path("src/data/program-data.json"))
     parser.add_argument("--model", default=os.getenv("ACTIVE_EMBEDDING_MODEL", DEFAULT_MODEL))
     parser.add_argument("--dimensions", type=int, default=env_int("EMBEDDING_DIMENSIONS"))
+    parser.add_argument(
+        "--full-vector-dimensions",
+        type=int,
+        default=env_int("FULL_EMBEDDING_DIMENSIONS") or 3072,
+        help="Also store this full embedding dimensionality locally when --dimensions requests a smaller vector.",
+    )
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--include-breaks", action="store_true")
     parser.add_argument("--netsci-limit", type=int, default=None)
@@ -135,20 +144,173 @@ def compact_text(parts: list[Any]) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def build_netsci_docs(data_dir: Path, include_breaks: bool) -> list[dict[str, Any]]:
+def compact_identity_text(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def normalize_identity_text(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", compact_identity_text(value))
+    return "".join(char for char in normalized if not unicodedata.combining(char)).lower()
+
+
+def short_hash(value: Any, length: int = 10) -> str:
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:length]
+
+
+def known_source_id(value: Any) -> str:
+    clean = compact_identity_text(value)
+    if not clean or clean in {"undefined", "null"}:
+        return ""
+    return clean
+
+
+def item_source_id(kind: str, record: dict[str, Any]) -> str:
+    if kind == "session":
+        return known_source_id(record.get("id"))
+    if kind == "poster":
+        return known_source_id(record.get("num"))
+    if kind == "talk":
+        official_id = known_source_id(record.get("id"))
+        if official_id:
+            return official_id
+        session_id = known_source_id(record.get("sessionId")) or known_source_id(record.get("dayKey")) or "unknown-session"
+        talk_index = "x" if record.get("talkIndex") is None else str(record.get("talkIndex"))
+        title_hash = short_hash(f"{record.get('title', '')}|{record.get('authors', '')}|{record.get('presenter', '')}", 8)
+        return f"missing-{session_id}-{talk_index}-{title_hash}"
+    raise ValueError(f"Unknown program item kind: {kind}")
+
+
+def source_key(kind: str, source_id: str) -> str:
+    return f"{kind}:{source_id}"
+
+
+def identity_fingerprint(kind: str, record: dict[str, Any]) -> str:
+    if kind == "session":
+        value = "|".join(
+            [
+                kind,
+                normalize_identity_text(record.get("title")),
+            ]
+        )
+    elif kind == "talk":
+        value = "|".join(
+            [
+                kind,
+                normalize_identity_text(record.get("title")),
+            ]
+        )
+    elif kind == "poster":
+        value = "|".join(
+            [
+                kind,
+                normalize_identity_text(record.get("title")),
+            ]
+        )
+    else:
+        raise ValueError(f"Unknown program item kind: {kind}")
+    return short_hash(value, 16)
+
+
+def previous_item_fingerprint(item: dict[str, Any]) -> str:
+    fingerprint = item.get("fingerprint")
+    if isinstance(fingerprint, str) and fingerprint:
+        return fingerprint
+    return identity_fingerprint(str(item.get("kind", "")), item)
+
+
+def previous_item_source_key(item: dict[str, Any]) -> str:
+    item_source_key = item.get("sourceKey")
+    if isinstance(item_source_key, str) and item_source_key:
+        return item_source_key
+    return source_key(str(item.get("kind", "")), str(item.get("sourceId", "")))
+
+
+def load_previous_identity(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]], int]:
+    if not path.exists():
+        return {}, {}, 0
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError):
+        return {}, {}, 0
+    items = payload.get("items")
+    if not isinstance(items, list):
+        return {}, {}, 0
+    raw_identity_version = payload.get("identityVersion")
+    identity_version = 3 if raw_identity_version == 3 else 2 if raw_identity_version == 2 else 1 if raw_identity_version == 1 else 0
+    if 0 < identity_version < 3:
+        return {}, {}, identity_version
+    by_source = {previous_item_source_key(item): item for item in items if isinstance(item, dict)}
+    by_fingerprint: dict[str, dict[str, Any]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        fingerprint = previous_item_fingerprint(item)
+        key = f"{item.get('kind')}:{fingerprint}"
+        by_fingerprint.setdefault(key, item)
+    return by_source, by_fingerprint, identity_version
+
+
+def allocate_doc_identity(
+    kind: str,
+    record: dict[str, Any],
+    previous_by_source: dict[str, dict[str, Any]],
+    previous_by_fingerprint: dict[str, dict[str, Any]],
+    previous_identity_version: int,
+    used_ids: set[str],
+) -> dict[str, str]:
+    source_id = item_source_id(kind, record)
+    record_source_key = source_key(kind, source_id)
+    base_id = f"{kind}:{source_id}"
+    fingerprint = identity_fingerprint(kind, record)
+    previous_at_source = previous_by_source.get(record_source_key)
+    previous_with_fingerprint = previous_by_fingerprint.get(f"{kind}:{fingerprint}")
+    item_id = base_id
+
+    if previous_at_source:
+        previous_fingerprint = previous_item_fingerprint(previous_at_source)
+        if previous_fingerprint == fingerprint:
+            item_id = str(previous_at_source.get("id") or base_id) if previous_identity_version >= 3 else base_id
+        else:
+            item_id = f"{base_id}:{short_hash(fingerprint, 10)}"
+    elif previous_with_fingerprint:
+        item_id = str(previous_with_fingerprint.get("id") or base_id)
+
+    if item_id in used_ids:
+        item_id = f"{base_id}:{short_hash(fingerprint, 10)}"
+        suffix = 2
+        while item_id in used_ids:
+            item_id = f"{base_id}:{short_hash(f'{fingerprint}:{suffix}', 10)}"
+            suffix += 1
+    used_ids.add(item_id)
+    return {
+        "id": item_id,
+        "sourceId": source_id,
+        "sourceKey": record_source_key,
+        "fingerprint": fingerprint,
+    }
+
+
+def build_netsci_docs(data_dir: Path, include_breaks: bool, previous_app_data: Path) -> list[dict[str, Any]]:
     sessions = read_json(data_dir / "sessions.json")
     talks = read_json(data_dir / "talks.json")
     posters = read_json(data_dir / "posters.json")
     docs: list[dict[str, Any]] = []
+    previous_by_source, previous_by_fingerprint, previous_identity_version = load_previous_identity(previous_app_data)
+    used_ids: set[str] = set()
 
     for session in sessions:
         if not include_breaks and session.get("type") == "break":
             continue
+        identity = allocate_doc_identity(
+            "session", session, previous_by_source, previous_by_fingerprint, previous_identity_version, used_ids
+        )
         docs.append(
             {
-                "id": f"session:{session['id']}",
+                "id": identity["id"],
                 "kind": "session",
-                "sourceId": session["id"],
+                "sourceId": identity["sourceId"],
+                "sourceKey": identity["sourceKey"],
+                "fingerprint": identity["fingerprint"],
                 "title": session.get("title", ""),
                 "metadata": {
                     "dayKey": session.get("dayKey"),
@@ -170,11 +332,16 @@ def build_netsci_docs(data_dir: Path, include_breaks: bool) -> list[dict[str, An
         )
 
     for talk in talks:
+        identity = allocate_doc_identity(
+            "talk", talk, previous_by_source, previous_by_fingerprint, previous_identity_version, used_ids
+        )
         docs.append(
             {
-                "id": f"talk:{talk['id']}",
+                "id": identity["id"],
                 "kind": "talk",
-                "sourceId": str(talk["id"]),
+                "sourceId": identity["sourceId"],
+                "sourceKey": identity["sourceKey"],
+                "fingerprint": identity["fingerprint"],
                 "title": talk.get("title", ""),
                 "metadata": {
                     "presenter": talk.get("presenter"),
@@ -198,11 +365,16 @@ def build_netsci_docs(data_dir: Path, include_breaks: bool) -> list[dict[str, An
         )
 
     for poster in posters:
+        identity = allocate_doc_identity(
+            "poster", poster, previous_by_source, previous_by_fingerprint, previous_identity_version, used_ids
+        )
         docs.append(
             {
-                "id": f"poster:{poster['num']}",
+                "id": identity["id"],
                 "kind": "poster",
-                "sourceId": str(poster["num"]),
+                "sourceId": identity["sourceId"],
+                "sourceKey": identity["sourceKey"],
+                "fingerprint": identity["fingerprint"],
                 "title": poster.get("title", ""),
                 "metadata": {
                     "num": poster.get("num"),
@@ -250,9 +422,8 @@ def get_gemini_api_key(args: argparse.Namespace) -> str:
     raise SystemExit("Missing Gemini API key. Set GEMINI_API_KEY.")
 
 
-def gemini_embedding(args: argparse.Namespace, text: str) -> list[float]:
+def gemini_embedding(args: argparse.Namespace, text: str, dimensions: int) -> list[float]:
     api_key = get_gemini_api_key(args)
-    dimensions = args.dimensions or 3072
     body = {
         "content": {"parts": [{"text": text}]},
         "taskType": "RETRIEVAL_DOCUMENT",
@@ -278,14 +449,15 @@ def gemini_embedding(args: argparse.Namespace, text: str) -> list[float]:
     values = ((payload.get("embedding") or {}).get("values"))
     if not isinstance(values, list):
         raise RuntimeError(f"Gemini response missing embedding.values: {payload}")
-    return normalize_vector(values, args.dimensions)
+    return normalize_vector(values, dimensions)
 
 
 def embed_one(args: argparse.Namespace, doc: dict[str, Any]) -> dict[str, Any]:
     last_error: Exception | None = None
     for attempt in range(args.retries + 1):
         try:
-            vector = gemini_embedding(args, doc["text"])
+            dimensions = args.dimensions or args.full_vector_dimensions
+            vector = gemini_embedding(args, doc["text"], dimensions)
             output = {key: value for key, value in doc.items() if key != "text"}
             output.update(
                 {
@@ -295,6 +467,14 @@ def embed_one(args: argparse.Namespace, doc: dict[str, Any]) -> dict[str, Any]:
                     "vector": vector,
                 }
             )
+            if args.dimensions and args.full_vector_dimensions > args.dimensions:
+                full_vector = gemini_embedding(args, doc["text"], args.full_vector_dimensions)
+                output.update(
+                    {
+                        "fullDimensions": len(full_vector),
+                        "fullVector": full_vector,
+                    }
+                )
             return output
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, RuntimeError) as error:
             last_error = error
@@ -305,7 +485,7 @@ def embed_one(args: argparse.Namespace, doc: dict[str, Any]) -> dict[str, Any]:
 
 
 def embed_netsci(args: argparse.Namespace) -> None:
-    docs = build_netsci_docs(args.data, args.include_breaks)
+    docs = build_netsci_docs(args.data, args.include_breaks, args.previous_app_data)
     if args.netsci_limit:
         docs = docs[: args.netsci_limit]
     vectors: list[dict[str, Any]] = []
@@ -318,17 +498,39 @@ def embed_netsci(args: argparse.Namespace) -> None:
                 print(f"Embedded NetSci {index}/{len(docs)}")
 
     vectors.sort(key=lambda record: record["id"])
+    full_vectors = []
+    for record in vectors:
+        full_vector = record.pop("fullVector", None)
+        full_dimensions = record.pop("fullDimensions", None)
+        if not isinstance(full_vector, list):
+            continue
+        full_vectors.append(
+            {
+                "id": record["id"],
+                "fingerprint": record.get("fingerprint"),
+                "model": record.get("model", args.model),
+                "dimensions": full_dimensions or len(full_vector),
+                "vector": full_vector,
+            }
+        )
     write_jsonl(args.out / "netsci-vectors.jsonl", vectors)
+    if full_vectors:
+        write_jsonl(args.out / "netsci-full-vectors.jsonl", full_vectors)
     write_json(
         args.out / "netsci-meta.json",
         {
             "model": args.model,
             "dimensions": args.dimensions or (len(vectors[0]["vector"]) if vectors else None),
+            "fullDimensions": full_vectors[0]["dimensions"] if full_vectors else None,
+            "fullVectorSource": str(args.out / "netsci-full-vectors.jsonl") if full_vectors else None,
             "count": len(vectors),
+            "fullCount": len(full_vectors),
             "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         },
     )
     print(f"Wrote {len(vectors)} NetSci vectors to {args.out / 'netsci-vectors.jsonl'}")
+    if full_vectors:
+        print(f"Wrote {len(full_vectors)} full NetSci vectors to {args.out / 'netsci-full-vectors.jsonl'}")
 
 
 def dot(left: list[float], right: list[float]) -> float:

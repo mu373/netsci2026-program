@@ -10,6 +10,8 @@ export type Ranking = {
 export type ProgramItem = {
   id: string;
   sourceId: string;
+  sourceKey: string;
+  fingerprint: string;
   kind: ProgramKind;
   title: string;
   abstract: string;
@@ -55,6 +57,15 @@ export type SavedItem = {
   savedAt: string;
   status: "interested" | "must-see" | "maybe" | "attended";
   note?: string;
+  snapshot?: {
+    id: string;
+    sourceId: string;
+    sourceKey: string;
+    fingerprint: string;
+    title: string;
+    kind: ProgramKind;
+  };
+  migratedFrom?: string;
 };
 
 export type Cluster = {
@@ -78,6 +89,16 @@ export type AppData = {
     labels: Record<string, string>;
   };
   items: ProgramItem[];
+  itemAliases?: Record<string, string>;
+  reusedSourceIds?: {
+    sourceKey: string;
+    previousId: string;
+    currentId: string;
+    previousFingerprint: string;
+    currentFingerprint: string;
+    previousTitle: string;
+    currentTitle: string;
+  }[];
   people: Person[];
   peopleByItem: Record<string, { id: string; slug: string; name: string; roles: string[] }[]>;
   relatedPeople: Record<string, RelatedPerson[]>;

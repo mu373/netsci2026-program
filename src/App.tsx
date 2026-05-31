@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { TopBar } from "./components/TopBar";
+import { resolveCurrentItemId } from "./data";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { analyticsEnabled, trackPageView } from "./lib/analytics";
 import { defaultDayKey, pushUrl, useRoute } from "./lib/navigation";
@@ -126,7 +127,8 @@ export default function App() {
   const { route, params } = useRoute();
   const saved = useSavedItems();
   const savedOnly = params.get("saved") === "1";
-  const openItemId = params.get("item");
+  const requestedOpenItemId = params.get("item");
+  const openItemId = requestedOpenItemId ? resolveCurrentItemId(requestedOpenItemId) : null;
   const isMobile = useIsMobile();
   const inlineDetail = !isMobile && route.name === "programs" && !!openItemId;
   const [chatResetKey, setChatResetKey] = useState(0);

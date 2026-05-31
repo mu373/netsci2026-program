@@ -16,6 +16,9 @@ export const people = data.people;
 export const clusters = data.clusters;
 
 export const itemById = new Map(items.map((item) => [item.id, item]));
+export const itemAliases = data.itemAliases || {};
+export const currentItemIds = new Set(items.map((item) => item.id));
+export const itemBySourceKey = new Map(items.map((item) => [item.sourceKey, item]));
 export const personById = new Map(people.map((person) => [person.id, person]));
 export const personBySlug = new Map(people.map((person) => [person.slug, person]));
 export const clusterById = new Map<number, Cluster>(
@@ -130,9 +133,14 @@ export function itemUrl(item: ProgramItem) {
   return `/session/${item.sourceId}`;
 }
 
+export function resolveCurrentItemId(itemId: string) {
+  if (itemById.has(itemId)) return itemId;
+  return itemAliases[itemId] || itemId;
+}
+
 export function resolveItemFromPath(kind: string, id: string | undefined) {
   if (!id) return null;
-  return itemById.get(`${kind}:${id}`) || null;
+  return itemById.get(`${kind}:${id}`) || itemBySourceKey.get(`${kind}:${id}`) || null;
 }
 
 export function sessionTalks(sessionId: string) {

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { identityFingerprint, identitySnapshot, shortHash, sourceKey } from "./program-identity.mjs";
 
 const root = process.cwd();
 const dataDir = path.join(root, "data");
@@ -7,6 +8,7 @@ const outDir = path.join(root, "src", "data");
 const outPath = path.join(outDir, "program-data.json");
 const vectorIndexPath = path.join(outDir, "vector-index.json");
 const personVectorsPath = path.join(dataDir, "similarity-content", "person-vectors.jsonl");
+const identityHistoryPath = path.join(dataDir, "program-identity-history.json");
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
@@ -14,6 +16,15 @@ function readJson(relativePath) {
 
 function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function readJsonFileIfExists(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  try {
+    return readJsonFile(filePath);
+  } catch {
+    return fallback;
+  }
 }
 
 function readJsonl(relativePath) {
@@ -228,12 +239,107 @@ const rankingById = new Map();
 
 const peopleByName = new Map();
 const items = [];
+const itemAliases = {};
+const reusedSourceIds = [];
+
+function previousProgramData() {
+  if (!fs.existsSync(outPath)) return null;
+  try {
+    return readJsonFile(outPath);
+  } catch {
+    return null;
+  }
+}
+
+function previousItemFingerprint(item) {
+  if (typeof item.fingerprint === "string" && item.fingerprint) return item.fingerprint;
+  return identityFingerprint(item.kind, item);
+}
+
+function previousItemSourceKey(item) {
+  if (typeof item.sourceKey === "string" && item.sourceKey) return item.sourceKey;
+  return sourceKey(item.kind, item.sourceId);
+}
+
+const previousData = previousProgramData();
+const previousIdentityVersion =
+  previousData?.identityVersion === 3 ? 3 : previousData?.identityVersion === 2 ? 2 : previousData?.identityVersion === 1 ? 1 : 0;
+const previousItems =
+  (previousIdentityVersion > 0 && previousIdentityVersion < 3) || !Array.isArray(previousData?.items)
+    ? []
+    : previousData.items;
+const previousBySourceKey = new Map(previousItems.map((item) => [previousItemSourceKey(item), item]));
+const previousByFingerprint = new Map();
+for (const item of previousItems) {
+  const fingerprint = previousItemFingerprint(item);
+  if (fingerprint && !previousByFingerprint.has(`${item.kind}:${fingerprint}`)) {
+    previousByFingerprint.set(`${item.kind}:${fingerprint}`, item);
+  }
+}
+const usedItemIds = new Set();
+
+function uniqueItemId(baseId, fingerprint) {
+  if (!usedItemIds.has(baseId)) return baseId;
+  let candidate = `${baseId}:${shortHash(fingerprint, 10)}`;
+  let suffix = 2;
+  while (usedItemIds.has(candidate)) {
+    candidate = `${baseId}:${shortHash(`${fingerprint}:${suffix}`, 10)}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function allocateIdentity(kind, record) {
+  const snapshot = identitySnapshot(kind, record);
+  const previousAtSource = previousBySourceKey.get(snapshot.sourceKey);
+  const previousWithFingerprint = previousByFingerprint.get(`${kind}:${snapshot.fingerprint}`);
+  let id = snapshot.baseId;
+  let reused = false;
+
+  if (previousAtSource) {
+    const previousFingerprint = previousItemFingerprint(previousAtSource);
+    if (previousFingerprint === snapshot.fingerprint) {
+      id = previousIdentityVersion >= 3 ? previousAtSource.id : snapshot.baseId;
+    } else {
+      reused = true;
+      id = `${snapshot.baseId}:${shortHash(snapshot.fingerprint, 10)}`;
+      reusedSourceIds.push({
+        sourceKey: snapshot.sourceKey,
+        previousId: previousAtSource.id,
+        currentId: id,
+        previousFingerprint,
+        currentFingerprint: snapshot.fingerprint,
+        previousTitle: previousAtSource.title || "",
+        currentTitle: compact(record.title),
+      });
+    }
+  } else if (previousWithFingerprint) {
+    id = previousWithFingerprint.id;
+    itemAliases[snapshot.baseId] = id;
+  }
+
+  id = uniqueItemId(id, snapshot.fingerprint);
+  usedItemIds.add(id);
+
+  if (!reused && id !== snapshot.baseId) {
+    itemAliases[snapshot.baseId] = id;
+  }
+
+  return {
+    id,
+    sourceId: snapshot.sourceId,
+    sourceKey: snapshot.sourceKey,
+    fingerprint: snapshot.fingerprint,
+  };
+}
 
 for (const session of sessions) {
-  const id = `session:${session.id}`;
+  const identity = allocateIdentity("session", session);
   const item = {
-    id,
-    sourceId: session.id,
+    id: identity.id,
+    sourceId: identity.sourceId,
+    sourceKey: identity.sourceKey,
+    fingerprint: identity.fingerprint,
     kind: "session",
     title: compact(session.title),
     abstract: compact(session.abstract || session.desc || session.talkTitle),
@@ -252,18 +358,20 @@ for (const session of sessions) {
     sessionTitle: "",
     posterNum: null,
     talkCount: session.talkCount || 0,
-    ranking: rankingById.get(id) || null,
+    ranking: rankingById.get(identity.id) || null,
   };
   items.push(item);
-  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", id);
-  for (const chair of parseNameList(item.chair)) addPerson(peopleByName, chair, "chair", id);
+  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", item.id);
+  for (const chair of parseNameList(item.chair)) addPerson(peopleByName, chair, "chair", item.id);
 }
 
 for (const talk of talks) {
-  const id = `talk:${talk.id}`;
+  const identity = allocateIdentity("talk", talk);
   const item = {
-    id,
-    sourceId: String(talk.id),
+    id: identity.id,
+    sourceId: identity.sourceId,
+    sourceKey: identity.sourceKey,
+    fingerprint: identity.fingerprint,
     kind: "talk",
     title: compact(talk.title),
     abstract: compact(talk.abstract),
@@ -282,18 +390,20 @@ for (const talk of talks) {
     sessionTitle: talk.sessionTitle || "",
     posterNum: null,
     talkIndex: talk.talkIndex ?? null,
-    ranking: rankingById.get(id) || null,
+    ranking: rankingById.get(identity.id) || null,
   };
   items.push(item);
-  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", id);
-  for (const author of parseAuthors(item.authors)) addPerson(peopleByName, author, "author", id);
+  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", item.id);
+  for (const author of parseAuthors(item.authors)) addPerson(peopleByName, author, "author", item.id);
 }
 
 for (const poster of posters) {
-  const id = `poster:${poster.num}`;
+  const identity = allocateIdentity("poster", poster);
   const item = {
-    id,
-    sourceId: String(poster.num),
+    id: identity.id,
+    sourceId: identity.sourceId,
+    sourceKey: identity.sourceKey,
+    fingerprint: identity.fingerprint,
     kind: "poster",
     title: compact(poster.title),
     abstract: compact(poster.abstract),
@@ -311,12 +421,34 @@ for (const poster of posters) {
     sessionId: "",
     sessionTitle: "",
     posterNum: poster.posterNum ?? poster.num,
-    ranking: rankingById.get(id) || null,
+    ranking: rankingById.get(identity.id) || null,
   };
   items.push(item);
-  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", id);
-  for (const author of parseAuthors(item.authors)) addPerson(peopleByName, author, "author", id);
+  for (const presenter of parseNameList(item.presenter)) addPerson(peopleByName, presenter, "presenter", item.id);
+  for (const author of parseAuthors(item.authors)) addPerson(peopleByName, author, "author", item.id);
 }
+
+const itemIds = new Set(items.map((item) => item.id));
+const identityHistory = readJsonFileIfExists(identityHistoryPath, { reusedSourceIds: [] });
+const historicalReusedSourceIds = Array.isArray(identityHistory.reusedSourceIds)
+  ? identityHistory.reusedSourceIds
+  : [];
+const persistedReusedSourceIds = Array.isArray(previousData?.reusedSourceIds)
+  ? previousData.reusedSourceIds.filter(
+      (entry) =>
+        entry &&
+        typeof entry.sourceKey === "string" &&
+        typeof entry.currentId === "string" &&
+        itemIds.has(entry.currentId),
+    )
+  : [];
+const reusedSourceIdsByKey = new Map();
+for (const entry of [...historicalReusedSourceIds, ...persistedReusedSourceIds, ...reusedSourceIds]) {
+  if (entry?.currentId && itemIds.has(entry.currentId)) {
+    reusedSourceIdsByKey.set(`${entry.sourceKey}:${entry.currentId}`, entry);
+  }
+}
+const allReusedSourceIds = [...reusedSourceIdsByKey.values()];
 
 const related = {};
 const vectorRecords = vectors.filter((record) => Array.isArray(record.vector));
@@ -397,8 +529,11 @@ for (const item of items) {
 }
 
 const payloadWithoutGeneratedAt = {
+  identityVersion: 3,
   days,
   items,
+  itemAliases,
+  reusedSourceIds: allReusedSourceIds,
   people,
   peopleByItem,
   relatedPeople,
@@ -420,6 +555,17 @@ const payload = {
 
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(outPath, `${JSON.stringify(payload)}\n`);
+fs.writeFileSync(
+  identityHistoryPath,
+  `${JSON.stringify(
+    {
+      schemaVersion: 1,
+      reusedSourceIds: allReusedSourceIds,
+    },
+    null,
+    2,
+  )}\n`,
+);
 
 const itemVectorRecordsForIndex = readJsonl("data/similarity-content/netsci-vectors.jsonl");
 const vectorIndex = {

@@ -5,6 +5,7 @@ import {
   clusterForItem,
   clusters,
   items,
+  resolveCurrentItemId,
   searchItems,
 } from "../data";
 import { DAYS, openItem, parseSearch, scrollPageToTop, updateParams } from "../lib/navigation";
@@ -102,7 +103,8 @@ export function ProgramsPage({
     return sortItems(filtered, sortKey, sortDir, dayOrderMap);
   }, [clusterId, dayFilter, dayOrderMap, kindFilter, query, savedById, savedOnly, sortDir, sortKey]);
 
-  const openItemId = params.get("item");
+  const requestedOpenItemId = params.get("item");
+  const openItemId = requestedOpenItemId ? resolveCurrentItemId(requestedOpenItemId) : null;
 
   useEffect(() => {
     if (!openItemId) return;
