@@ -20,6 +20,7 @@ import type {
   ListTopicsInput,
   SearchPeopleInput,
   SearchProgramsInput,
+  VectorIndex,
 } from "../program";
 import type { Cluster, ProgramItem } from "../../src/types";
 
@@ -29,7 +30,9 @@ type ProgramRecommendationInput = {
   outro?: string;
 };
 
-export function chatToolsForApiKey(apiKey = "") {
+export function chatToolsForApiKey(apiKey = "", loadVectorIndex?: () => Promise<VectorIndex | null>) {
+  const getVectorIndex = () => loadVectorIndex?.() ?? Promise.resolve(null);
+
   return {
   searchPrograms: tool<
     SearchProgramsInput,
@@ -57,7 +60,7 @@ export function chatToolsForApiKey(apiKey = "") {
     }),
     execute: async ({ query, limit }) => ({
       query,
-      results: (await searchItemsVector(query, apiKey, limitNumber(limit, 12, 40))).map(({ item, score }) => ({
+      results: (await searchItemsVector(query, apiKey, await getVectorIndex(), limitNumber(limit, 12, 40))).map(({ item, score }) => ({
         ...compactItemSummary(item),
         searchScore: score,
       })),
@@ -175,7 +178,7 @@ export function chatToolsForApiKey(apiKey = "") {
     }),
     execute: async ({ query, limit }) => ({
       query,
-      results: await findPeopleByTopicVector(query, apiKey, limitNumber(limit, 10, 30)),
+      results: await findPeopleByTopicVector(query, apiKey, await getVectorIndex(), limitNumber(limit, 10, 30)),
     }),
   }),
 

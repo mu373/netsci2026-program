@@ -7,6 +7,7 @@ const dataDir = path.join(root, "data");
 const outDir = path.join(root, "src", "data");
 const outPath = path.join(outDir, "program-data.json");
 const vectorIndexPath = path.join(outDir, "vector-index.json");
+const publicVectorIndexPath = path.join(root, "public", "vector-index.json");
 const personVectorsPath = path.join(dataDir, "similarity-content", "person-vectors.jsonl");
 const identityHistoryPath = path.join(dataDir, "program-identity-history.json");
 
@@ -578,10 +579,13 @@ const vectorIndex = {
     vector: record.vector,
   })),
 };
-fs.writeFileSync(vectorIndexPath, `${JSON.stringify(vectorIndex)}\n`);
+const vectorIndexJson = `${JSON.stringify(vectorIndex)}\n`;
+fs.writeFileSync(vectorIndexPath, vectorIndexJson);
+fs.writeFileSync(publicVectorIndexPath, vectorIndexJson);
 
 console.log(
   `Wrote ${items.length} items, ${people.length} people, ${personVectorRecords.length} person vectors, ${itemVectorRecordsForIndex.length} item vectors, and ${Object.keys(related).length} related item lists to ${outPath}`,
 );
 console.log(`Wrote person vectors to ${personVectorsPath}`);
 console.log(`Wrote item vector index to ${vectorIndexPath}`);
+console.log(`Wrote public item vector index to ${publicVectorIndexPath}`);

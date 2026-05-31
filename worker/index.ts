@@ -39,12 +39,29 @@ import {
   searchPeople,
   topicSummaries,
 } from "./program";
+import type { VectorIndex } from "./program";
 import type { UIMessage } from "ai";
 import type { Env } from "./types";
 import type { ProgramItem } from "../src/types";
 
 const app = new Hono<Env>();
 app.use("/api/*", cors());
+
+let vectorIndexPromise: Promise<VectorIndex | null> | null = null;
+
+async function loadVectorIndex(env: Env["Bindings"], requestUrl: string) {
+  vectorIndexPromise ??= env.ASSETS.fetch(new URL("/vector-index.json", requestUrl))
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`Could not load vector index: ${response.status}`);
+      return (await response.json()) as VectorIndex;
+    })
+    .catch((error) => {
+      console.error("loadVectorIndex error:", error);
+      vectorIndexPromise = null;
+      return null;
+    });
+  return vectorIndexPromise;
+}
 
 function chatApiKey(env: Env["Bindings"]) {
   return env.GEMINI_API_KEY || env.GOOGLE_GENERATIVE_AI_API_KEY || "";
@@ -113,10 +130,11 @@ app.get("/api/people/by-topic", async (c) => {
   const query = c.req.query("q") || "";
   const limit = limitParam(c.req.query("limit"), 10, 100);
   const apiKey = chatApiKey(c.env);
+  const vectorIndex = apiKey ? await loadVectorIndex(c.env, c.req.url) : null;
   return c.json({
     query,
     results: apiKey
-      ? await findPeopleByTopicVector(query, apiKey, limit)
+      ? await findPeopleByTopicVector(query, apiKey, vectorIndex, limit)
       : findPeopleByTopic(query, limit),
   });
 });
@@ -140,9 +158,10 @@ app.get("/api/search", async (c) => {
   const query = c.req.query("q") || "";
   const limit = limitParam(c.req.query("limit"), 12, 100);
   const apiKey = chatApiKey(c.env);
+  const vectorIndex = apiKey ? await loadVectorIndex(c.env, c.req.url) : null;
   return c.json({
     query,
-    results: apiKey ? await searchItemsVector(query, apiKey, limit) : searchItems(query, limit),
+    results: apiKey ? await searchItemsVector(query, apiKey, vectorIndex, limit) : searchItems(query, limit),
   });
 });
 
@@ -181,7 +200,7 @@ app.post("/api/chat", async (c) => {
     model: google("gemini-2.5-flash"),
     system: systemPromptForChat(query, savedItems),
     messages: await convertToModelMessages(messages),
-    tools: chatToolsForApiKey(apiKey),
+    tools: chatToolsForApiKey(apiKey, () => loadVectorIndex(c.env, c.req.url)),
     stopWhen: stepCountIs(4),
   });
 

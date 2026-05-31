@@ -1,6 +1,5 @@
 import Fuse from "fuse.js";
 import programData from "../src/data/program-data.json";
-import vectorIndexData from "../src/data/vector-index.json";
 import type { AppData, ProgramItem } from "../src/types";
 
 export type ListTopicsInput = { query?: string; limit?: number };
@@ -9,6 +8,11 @@ export type ListRelatedItemsInput = { itemId: string; limit?: number };
 export type SearchProgramsInput = { query: string; limit?: number };
 export type SearchPeopleInput = { query: string; limit?: number };
 export type FindPeopleByTopicInput = { query: string; limit?: number };
+export type VectorIndex = {
+  model: string;
+  dimensions: number;
+  records: { id: string; vector: number[] }[];
+};
 
 export const TOPIC_PERSON_RETRIEVAL_LIMIT = 120;
 const VECTOR_SEARCH_CANDIDATE_LIMIT = 120;
@@ -16,11 +20,6 @@ const VECTOR_SEARCH_MIN_SCORE = 0.2;
 const VECTOR_SEARCH_LEXICAL_WEIGHT = 0.2;
 
 export const data = programData as AppData;
-const vectorIndex = vectorIndexData as {
-  model: string;
-  dimensions: number;
-  records: { id: string; vector: number[] }[];
-};
 export const itemById = new Map(data.items.map((item) => [item.id, item]));
 export const itemBySourceKey = new Map(data.items.map((item) => [item.sourceKey, item]));
 export const personBySlug = new Map(data.people.map((person) => [person.slug, person]));
@@ -229,7 +228,7 @@ function dot(left: number[], right: number[]) {
   return sum;
 }
 
-async function embedQuery(query: string, apiKey: string) {
+async function embedQuery(query: string, apiKey: string, vectorIndex: VectorIndex) {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${vectorIndex.model}:embedContent`,
     {
@@ -259,11 +258,11 @@ async function embedQuery(query: string, apiKey: string) {
   return vector;
 }
 
-export async function searchItemsVector(query: string, apiKey: string, limit = 12) {
+export async function searchItemsVector(query: string, apiKey: string, vectorIndex: VectorIndex | null, limit = 12) {
   const trimmed = query.trim();
-  if (!trimmed || !apiKey) return searchItems(query, limit);
+  if (!trimmed || !apiKey || !vectorIndex) return searchItems(query, limit);
 
-  const queryVector = await embedQuery(trimmed, apiKey);
+  const queryVector = await embedQuery(trimmed, apiKey, vectorIndex);
   const vectorResults = vectorIndex.records
     .map((record) => ({
       item: itemById.get(record.id),
@@ -374,9 +373,9 @@ export function findPeopleByTopic(query: string, limit = 12) {
   return peopleByTopicFromMatches(searchItems(query, TOPIC_PERSON_RETRIEVAL_LIMIT), limit);
 }
 
-export async function findPeopleByTopicVector(query: string, apiKey: string, limit = 12) {
+export async function findPeopleByTopicVector(query: string, apiKey: string, vectorIndex: VectorIndex | null, limit = 12) {
   return peopleByTopicFromMatches(
-    await searchItemsVector(query, apiKey, TOPIC_PERSON_RETRIEVAL_LIMIT),
+    await searchItemsVector(query, apiKey, vectorIndex, TOPIC_PERSON_RETRIEVAL_LIMIT),
     limit,
   );
 }
