@@ -131,6 +131,8 @@ def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
     records = []
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
@@ -484,35 +486,118 @@ def embed_one(args: argparse.Namespace, doc: dict[str, Any]) -> dict[str, Any]:
     raise RuntimeError(f"Failed to embed {doc['id']}: {last_error}") from last_error
 
 
+def existing_vector_key(record: dict[str, Any]) -> tuple[str, str, str] | None:
+    item_id = record.get("id")
+    fingerprint = record.get("fingerprint")
+    model = record.get("model")
+    if not isinstance(item_id, str) or not isinstance(fingerprint, str) or not isinstance(model, str):
+        return None
+    return item_id, fingerprint, model
+
+
+def reusable_vector(
+    index: dict[tuple[str, str, str], dict[str, Any]],
+    doc: dict[str, Any],
+    *,
+    model: str,
+    dimensions: int,
+) -> dict[str, Any] | None:
+    key = (doc["id"], doc["fingerprint"], model)
+    record = index.get(key)
+    if not record:
+        return None
+    vector = record.get("vector")
+    if record.get("dimensions") != dimensions or not isinstance(vector, list) or len(vector) != dimensions:
+        return None
+    return record
+
+
+def vector_record_from_doc(doc: dict[str, Any], existing: dict[str, Any]) -> dict[str, Any]:
+    output = {key: value for key, value in doc.items() if key != "text"}
+    output.update(
+        {
+            "text": doc["text"],
+            "model": existing["model"],
+            "dimensions": existing["dimensions"],
+            "vector": existing["vector"],
+        }
+    )
+    return output
+
+
 def embed_netsci(args: argparse.Namespace) -> None:
     docs = build_netsci_docs(args.data, args.include_breaks, args.previous_app_data)
     if args.netsci_limit:
         docs = docs[: args.netsci_limit]
-    vectors: list[dict[str, Any]] = []
+    compact_dimensions = args.dimensions or args.full_vector_dimensions
+    should_store_full = bool(args.dimensions and args.full_vector_dimensions > args.dimensions)
+    existing_compact = {
+        key: record
+        for record in read_jsonl(args.out / "netsci-vectors.jsonl")
+        if (key := existing_vector_key(record)) is not None
+    }
+    existing_full = {
+        key: record
+        for record in read_jsonl(args.out / "netsci-full-vectors.jsonl")
+        if (key := existing_vector_key(record)) is not None
+    }
+    vectors_by_id: dict[str, dict[str, Any]] = {}
+    full_vectors_by_id: dict[str, dict[str, Any]] = {}
+    docs_to_embed: list[dict[str, Any]] = []
 
-    with ThreadPoolExecutor(max_workers=args.workers) as executor:
-        futures = {executor.submit(embed_one, args, doc): doc for doc in docs}
-        for index, future in enumerate(as_completed(futures), start=1):
-            vectors.append(future.result())
-            if index % 25 == 0 or index == len(docs):
-                print(f"Embedded NetSci {index}/{len(docs)}")
+    for doc in docs:
+        compact = reusable_vector(existing_compact, doc, model=args.model, dimensions=compact_dimensions)
+        full = (
+            reusable_vector(existing_full, doc, model=args.model, dimensions=args.full_vector_dimensions)
+            if should_store_full
+            else None
+        )
+        if compact and (not should_store_full or full):
+            vectors_by_id[doc["id"]] = vector_record_from_doc(doc, compact)
+            if full:
+                full_vectors_by_id[doc["id"]] = {
+                    "id": doc["id"],
+                    "fingerprint": doc.get("fingerprint"),
+                    "model": full["model"],
+                    "dimensions": full["dimensions"],
+                    "vector": full["vector"],
+                }
+            continue
+        docs_to_embed.append(doc)
 
+    print(f"Reusing {len(vectors_by_id)}/{len(docs)} NetSci vectors; embedding {len(docs_to_embed)} changed or new docs")
+
+    if docs_to_embed:
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = {executor.submit(embed_one, args, doc): doc for doc in docs_to_embed}
+            for index, future in enumerate(as_completed(futures), start=1):
+                record = future.result()
+                vectors_by_id[record["id"]] = record
+                if index % 25 == 0 or index == len(docs_to_embed):
+                    print(f"Embedded NetSci {index}/{len(docs_to_embed)}")
+
+    vectors = [vectors_by_id[doc["id"]] for doc in docs]
     vectors.sort(key=lambda record: record["id"])
     full_vectors = []
     for record in vectors:
         full_vector = record.pop("fullVector", None)
         full_dimensions = record.pop("fullDimensions", None)
-        if not isinstance(full_vector, list):
+        if isinstance(full_vector, list):
+            full_vectors.append(
+                {
+                    "id": record["id"],
+                    "fingerprint": record.get("fingerprint"),
+                    "model": record.get("model", args.model),
+                    "dimensions": full_dimensions or len(full_vector),
+                    "vector": full_vector,
+                }
+            )
             continue
-        full_vectors.append(
-            {
-                "id": record["id"],
-                "fingerprint": record.get("fingerprint"),
-                "model": record.get("model", args.model),
-                "dimensions": full_dimensions or len(full_vector),
-                "vector": full_vector,
-            }
-        )
+        reused_full = full_vectors_by_id.get(record["id"])
+        if not reused_full:
+            continue
+        full_vectors.append(reused_full)
+    full_vectors.sort(key=lambda record: record["id"])
     write_jsonl(args.out / "netsci-vectors.jsonl", vectors)
     if full_vectors:
         write_jsonl(args.out / "netsci-full-vectors.jsonl", full_vectors)
