@@ -26,7 +26,7 @@ const EXAMPLES = [
   "Who works on science of science?",
   "Are there talks on GNNs?",
   "Find presentations by a speaker.",
-  "Is there any work on epidemics and mobility?",
+  "Is there any work on epidemic spread and mobility?",
 ];
 
 const KEYBOARD_INSET_THRESHOLD = 80;
