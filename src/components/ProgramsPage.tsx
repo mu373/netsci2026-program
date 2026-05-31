@@ -45,7 +45,7 @@ export function ProgramsPage({
 }) {
   const params = parseSearch();
   const query = params.get("q") || "";
-  const kindFilter = params.get("kind") || "all";
+  const kindFilter = params.get("kind") || "talk";
   const dayFilter = params.get("day") || "all";
   const savedOnly = params.get("saved") === "1";
   const view = params.get("view") === "topics" ? "topics" : "list";
@@ -59,6 +59,13 @@ export function ProgramsPage({
     updateParams((next) => {
       if (value === null || value === "" || value === "all") next.delete(key);
       else next.set(key, value);
+    });
+  }
+
+  function setKindParam(value: string) {
+    updateParams((next) => {
+      if (value === "talk") next.delete("kind");
+      else next.set("kind", value);
     });
   }
 
@@ -271,7 +278,7 @@ export function ProgramsPage({
                 <button
                   key={value}
                   className={kindFilter === value ? "kindBtn active" : "kindBtn"}
-                  onClick={() => setParam("kind", value)}
+                  onClick={() => setKindParam(value)}
                 >
                   {label}
                 </button>
