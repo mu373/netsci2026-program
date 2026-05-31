@@ -23,13 +23,7 @@ wrangler secret put GEMINI_API_KEY
 
 Without a Gemini key, the chat tab is disabled and `/api/chat` returns unavailable.
 
-Enable Google Analytics by copying the env template and setting the Vite build-time variable:
-
-```sh
-cp .env.example .env.production
-```
-
-If `VITE_GOOGLE_ANALYTICS_ID` is unset, the app does not load Google Analytics.
+Google Analytics is installed in `index.html` with measurement ID `G-8BRBLEJSEY`.
 
 ## Commands
 
