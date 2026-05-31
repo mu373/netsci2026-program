@@ -14,7 +14,7 @@ import { displayTitle, itemSubLine, timeRange, titleCase } from "../lib/programH
 import type { SavedItem } from "../types";
 import { SaveButton } from "./SaveButton";
 
-const RELATED_ITEM_LIMIT = 20;
+const RELATED_ITEM_LIMIT = 50;
 
 export function DetailDrawer({
   itemId,

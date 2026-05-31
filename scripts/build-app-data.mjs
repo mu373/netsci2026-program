@@ -453,9 +453,9 @@ const allReusedSourceIds = [...reusedSourceIdsByKey.values()];
 const related = {};
 const vectorRecords = vectors.filter((record) => Array.isArray(record.vector));
 const vectorById = new Map(vectorRecords.map((record) => [record.id, record.vector]));
-const RELATED_ITEM_LIMIT = 20;
+const RELATED_ITEM_LIMIT = 50;
 const RELATED_PEOPLE_MIN_SCORE = 0.9;
-const RELATED_PEOPLE_LIMIT = 30;
+const RELATED_PEOPLE_LIMIT = 50;
 for (const record of vectorRecords) {
   const scores = [];
   for (const candidate of vectorRecords) {
