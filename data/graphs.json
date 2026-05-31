@@ -7137,19 +7137,6 @@
         "y": -80
       },
       {
-        "id": "145",
-        "title": "Understanding Urban-Rural Disparities in Mobility Inefficiency for Colombia, Mexico, and India",
-        "authors": "Iyer, Nandini*; Luca, Massimiliano; Di Clemente, Riccardo",
-        "abstract": "As urbanisation accelerates globally, understanding mobility disparities between urban and rural areas becomes crucial for equitable development. Previous approaches to defining urban-rural boundaries rely on population density thresholds [1] or built environment contiguity [2], yet these static methods fail to capture functional interdependencies between regions. This critical gap leaves policymakers without actionable insights about where and how mobility infrastructure fails to serve rural communities, particularly in Low and Middle-Income Countries where informal employment and multi-purpose trips shape travel patterns differently than in Global North contexts. We address this gap by investigating mobility inefficiency inequalities across Colombia, India, and Mexico using aggregated Location-Based Services data from November-December 2019 [3]. We develop a novel framework that defines urban-rural boundaries through network percolation of mobility patterns rather than static characteristics, capturing functional integration of settlements. Our classification shows strong agreement with established Global Urban Rural Settlement datasets, validating our mobility-based approach. We introduce mobility inefficiency as a metric measuring deviation between actual trip lengths and optimal shortest paths. Importantly, high inefficiency values do not imply poor individual routing choices but reveal aggregated systemic constraints such as congestion, limited infrastructure, geographic barriers, or trip chaining patterns. Our analysis reveals that rural areas consistently exhibit higher mobility inefficiency than urban areas, particularly for longer trips (>5km) and later in the day (Figure 1A visualises the case of Colombia). These disparities only emerge when analysing both trip distance and time of day simultaneously, while aggregate analyses mask important inequalities.   For urban areas, we construct vector fields to analyse transit-efficiency alignment. We calculate public transit accessibility scores combining coverage area (convex hull of transit stops) and stop density from OpenStreetMap data, then create spatial gradient vectors showing how transit access and mobility efficiency vary across neighbouring areas. Our transit metric was validated against General Transit Feed Specification data in Bogotá and Mexico City, showing strong correlations during operational hours. Comparing angular differences between these vector fields reveals four distinct urban patterns, with Colombian cities showing stronger alignment likely due to Bus Rapid Transit systems (Figure 1B). For rural areas, we analyse all rural geohashes within 256km of major cities, linking each to its nearest urban centre. Using OLS regression, we examine how distance from city centre, population, directional orientation (east-west and north-south positioning), and proximity to alternative cities relate to inefficiency. Results reveal context-specific patterns: distance matters in Bogotá, population in New Delhi (Figure 1C), while directional patterns in all three cities align with documented geographic barriers and socioeconomic distributions. Our framework demonstrates that measuring mobility inequality requires both consistent metrics and context-appropriate analytical methods, providing actionable insights for targeted infrastructure investment.",
-        "session": "Accept - Poster",
-        "day": "Jun 3",
-        "time": "6:30 PM",
-        "primarySpeaker": "Riccardo Di Clemente",
-        "posterNum": 48,
-        "x": 272.9,
-        "y": 392.9
-      },
-      {
         "id": "153",
         "title": "The Specialization of Interdisciplinary Innovators in Science and Technology",
         "authors": "Kusumegi, Keigo*",
@@ -9436,6 +9423,32 @@
         "posterNum": 73,
         "x": -1335.6,
         "y": -1021
+      },
+      {
+        "id": "156",
+        "title": "Hypergraph Representation Improves Cell Clustering in Single-Cell RNA Sequencing Data",
+        "authors": "He, Wan; Eliassi-Rad, Tina",
+        "abstract": "Single-cell RNA sequencing (scRNA-seq) data analysis is often performed using network projections that produce co-expression networks. These network-based algorithms are attractive because regulatory interactions are fundamentally network-based and there are many tools available for downstream analysis. However, most network-based approaches have two major limitations. First, they are typically unipartite and therefore fail to capture higher-order information. Second, scRNA-seq data are often sparse, so most algorithms for constructing unipartite network projections are inefficient and may overestimate co-expression relationships, or may under-utilize the sparsity when clustering (e.g., with cosine distance. To address these limitations, we propose representing scRNA-seq expression data as hypergraphs, which are generalized graphs where a hyperedge can connect more than two vertices. In this context, hypergraph nodes represent cells, and hyperedges represent genes. Each hyperedge connects all cells in which its corresponding gene is actively expressed, indicating the expression of that gene across different cells. The resulting hypergraph can capture higher-order information and appropriately handle varying levels of data sparsity. This representation enables clustering algorithms to leverage higher-order relationships for improved cell-type differentiation.  To distinguish cell types using hypergraph representations of scRNA-seq data, we introduce two novel clustering algorithms: (1) Dual-Importance Preference Hypergraph Walk (DIPHW) and (2) Coexpression and Memory-Integrated Dual-Importance Preference Hypergraph Walk (CoMem-DIPHW) [1]. DIPHW is a new hypergraph-based random walk algorithm that computes cell embeddings by considering the relative importance of genes to cells and cells to genes, incorporating a preference exponent to facilitate clustering. CoMem-DIPHW integrates two unipartite projections, the gene coexpression and cell coexpression networks, along with the cell-gene expression hypergraph derived from single-cell abundance count data into the random walk model. The advantage of CoMem-DIPHW is that it accounts for both local information from single-cell gene expression and global information from pairwise similarity in the two coexpression networks.  We benchmark the performance of our algorithms against established and state-of-the-art deep learning approaches using both real-world and simulated scRNA-seq data. Real-world datasets include cells from human pancreas, mouse pancreas, human brain, and mouse brain tissues. We also use a ground-truth labeled cell-type annotation dataset based on human lung adenocarcinoma cell lines. Quantitative evaluation using Normalized Mutual Information (NMI) and Adjusted Rand Index (ARI) shows that CoMem-DIPHW consistently outperforms established algorithms and state-of-the-art deep learning algorithms for cell-type clustering. Our proposed algorithms show the greatest improvement on scRNA-seq data with weak modularity. Moreoever, CoMem-DIPHW successfully annotates clusters with biologically relevant cell types. Our results highlight the utility of hypergraph representations in the analysis of scRNA-seq data. Our algorithms are implemented in Python and are available at https://github.com/wanhe13/CoMem-DIPHW.",
+        "session": "Accept - Poster",
+        "day": "Jun 3",
+        "time": "6:30 PM",
+        "primarySpeaker": "Wan He",
+        "posterNum": 234,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "143",
+        "title": "Graph Neural Networks for Maritime Scheduling",
+        "authors": "Orazem, Geoff*; Barnes, Matthew; Claparols, Andres; Murray, Alexander; Moghadam, Mehdi",
+        "abstract": "Maritime logistics networks face significant, largely unsolved challenges in predicting vessel schedule changes (such as port omissions and blank sailings) due to the complex interdependencies between ports, vessels, and voyages. Traditional approaches forecast the arrival times of vessels using a combination of historical time-series of vessel positions, speed, and arrival times.This forecast is extrapolated to incorporate any delays to a pre-computed shipping schedule and dependencies between vessels are rarely considered, each vessel voyage pair is assumed to be independent.  In this work, we formulate vessel schedule evolution as a temporal link prediction task utilising windowed historical data to predict changes in vessel itineraries. We model maritime vessel movements as a heterogeneous multi-layer network of edges between ports, voyages, legs and vessels. Each vessel is connected to the voyages it runs on, which are decomposed into multiple legs, linking pairs of ports. This hierarchical representation captures the complex structural and temporal dependencies between 6,697 vessels, 87,041 voyages, and 1,050 port nodes. For prediction, we investigate the effectiveness of three state-of-the-art graph neural network architectures: a Temporal Graph Transformer, a Continuous-Time Graph Neural Network, and a spatially-aware Graph Transformer extended to encode rich temporal edge features across node types. Unlike traditional time-series forecasting methods, our link prediction framework encodes graph structure through message passing and attention mechanisms. By concatenating source and destination embeddings, the models predict the probability of future edge formation.  Our comparative evaluation demonstrates the strengths and trade-offs of each architecture in modelling large-scale, dynamic maritime traffic networks.  This work represents a significant advancement in applying deep learning to maritime operations, providing a foundation for proactive maritime logistics planning.",
+        "session": "Accept - Poster",
+        "day": "Jun 3",
+        "time": "6:30 PM",
+        "primarySpeaker": "Geoff Orazem",
+        "posterNum": 235,
+        "x": 0,
+        "y": 0
       }
     ],
     "links": [
@@ -9851,11 +9864,6 @@
       },
       {
         "s": "48",
-        "t": "145",
-        "v": 0.585
-      },
-      {
-        "s": "48",
         "t": "288",
         "v": 0.583
       },
@@ -10213,21 +10221,6 @@
         "s": "130",
         "t": "579",
         "v": 0.5965
-      },
-      {
-        "s": "145",
-        "t": "343",
-        "v": 0.5856
-      },
-      {
-        "s": "145",
-        "t": "414",
-        "v": 0.573
-      },
-      {
-        "s": "145",
-        "t": "497",
-        "v": 0.6132
       },
       {
         "s": "153",
@@ -11656,8 +11649,8 @@
       }
     ],
     "colors": {
-      "Accept - Lightning Talk + Poster": "#C8352E",
-      "Accept - Poster": "#2E86C1"
+      "Accept - Lightning Talk + Poster": "#e28e1e",
+      "Accept - Poster": "#719844"
     },
     "threshold": 0.55,
     "sessionOrder": [
