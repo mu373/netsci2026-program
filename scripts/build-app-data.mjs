@@ -453,8 +453,9 @@ const allReusedSourceIds = [...reusedSourceIdsByKey.values()];
 const related = {};
 const vectorRecords = vectors.filter((record) => Array.isArray(record.vector));
 const vectorById = new Map(vectorRecords.map((record) => [record.id, record.vector]));
+const RELATED_ITEM_LIMIT = 20;
 const RELATED_PEOPLE_MIN_SCORE = 0.9;
-const RELATED_PEOPLE_LIMIT = 15;
+const RELATED_PEOPLE_LIMIT = 30;
 for (const record of vectorRecords) {
   const scores = [];
   for (const candidate of vectorRecords) {
@@ -462,7 +463,7 @@ for (const record of vectorRecords) {
     scores.push({ id: candidate.id, score: dot(record.vector, candidate.vector) });
   }
   scores.sort((a, b) => b.score - a.score);
-  related[record.id] = scores.slice(0, 10);
+  related[record.id] = scores.slice(0, RELATED_ITEM_LIMIT);
 }
 
 const people = [...peopleByName.values()].sort((a, b) => a.name.localeCompare(b.name));

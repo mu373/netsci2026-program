@@ -9,6 +9,8 @@ export type SearchProgramsInput = { query: string; limit?: number };
 export type SearchPeopleInput = { query: string; limit?: number };
 export type FindPeopleByTopicInput = { query: string; limit?: number };
 
+export const TOPIC_PERSON_RETRIEVAL_LIMIT = 120;
+
 export const data = programData as AppData;
 export const itemById = new Map(data.items.map((item) => [item.id, item]));
 export const itemBySourceKey = new Map(data.items.map((item) => [item.sourceKey, item]));
@@ -181,7 +183,7 @@ export function searchPeople(query: string, limit = 12) {
 }
 
 export function findPeopleByTopic(query: string, limit = 12) {
-  const matches = searchItems(query, 40);
+  const matches = searchItems(query, TOPIC_PERSON_RETRIEVAL_LIMIT);
   const peopleById = new Map<
     string,
     {

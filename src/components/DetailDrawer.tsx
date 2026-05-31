@@ -14,6 +14,8 @@ import { displayTitle, itemSubLine, timeRange, titleCase } from "../lib/programH
 import type { SavedItem } from "../types";
 import { SaveButton } from "./SaveButton";
 
+const RELATED_ITEM_LIMIT = 20;
+
 export function DetailDrawer({
   itemId,
   saved,
@@ -88,7 +90,7 @@ export function DetailDrawer({
 
   const talks = item.kind === "session" ? sessionTalks(item.sourceId) : [];
   const posters = item.kind === "session" ? sessionPosters(item.sourceId) : [];
-  const related = relatedItems(item.id).slice(0, 10);
+  const related = relatedItems(item.id).slice(0, RELATED_ITEM_LIMIT);
   const sessionChair =
     item.kind === "session" && item.chair ? item.chair.replace(/\s*;\s*/g, ", ") : "";
 

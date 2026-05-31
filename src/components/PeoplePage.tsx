@@ -7,9 +7,9 @@ import { PEOPLE_LIST_SCROLL_KEY } from "../lib/scrollPositions";
 import type { SavedItem } from "../types";
 import { ItemsTable } from "./ItemsTable";
 
-const RELATED_PEOPLE_LIMIT = 15;
+const RELATED_PEOPLE_LIMIT = 30;
 const RELATED_PEOPLE_HELP =
-  "Calculated from each person's normalized average program embedding, then ranked by vector similarity. Shows up to 15 matches above 0.90; shared is the number of overlapping program items.";
+  "Calculated from each person's normalized average program embedding, then ranked by vector similarity. Shows up to 30 matches above 0.90; shared is the number of overlapping program items.";
 
 function savePeopleListScroll() {
   const scroller = document.scrollingElement || document.documentElement;
