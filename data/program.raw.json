@@ -1,8 +1,8 @@
 {
   "conference": {
     "name": "NetSci 2026",
-    "sourceUrl": "https://program.netsci2026.com/",
-    "extractedAt": "2026-05-31T06:21:37.099Z",
+    "sourceUrl": "/home/minami/Developer/netsci2026/data/program.html",
+    "extractedAt": "2026-05-31T06:31:40.272Z",
     "start": null,
     "end": null,
     "defaultRoom": "Amesbury Ballroom"

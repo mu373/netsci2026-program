@@ -137,6 +137,7 @@ function flattenSessions(eventsByDay, dayLabels) {
   const sessions = [];
   for (const [dayKey, events] of Object.entries(eventsByDay)) {
     for (const event of events) {
+      if (event.type === "continues") continue;
       sessions.push({
         ...event,
         dayKey,

@@ -156,21 +156,6 @@
     "talkCount": 0
   },
   {
-    "id": "mon-cont-110",
-    "time": "11:00 AM – 12:30 PM",
-    "startH": 11,
-    "endH": 12.5,
-    "title": "School & satellite sessions continue",
-    "type": "continues",
-    "room": "",
-    "presenter": "",
-    "chair": "",
-    "continues": true,
-    "dayKey": "mon",
-    "dayLabel": "Mon June 1",
-    "talkCount": 0
-  },
-  {
     "id": "m-brk1",
     "time": "12:30 – 2:30 PM",
     "startH": 12.5,
@@ -263,21 +248,6 @@
     "type": "break",
     "room": "Amesbury Ballroom",
     "presenter": "",
-    "dayKey": "mon",
-    "dayLabel": "Mon June 1",
-    "talkCount": 0
-  },
-  {
-    "id": "mon-cont-165",
-    "time": "4:30 – 6:00 PM",
-    "startH": 16.5,
-    "endH": 18,
-    "title": "School & satellite sessions continue",
-    "type": "continues",
-    "room": "",
-    "presenter": "",
-    "chair": "",
-    "continues": true,
     "dayKey": "mon",
     "dayLabel": "Mon June 1",
     "talkCount": 0
@@ -425,21 +395,6 @@
     "talkCount": 0
   },
   {
-    "id": "tue-cont-110",
-    "time": "11:00 AM – 12:30 PM",
-    "startH": 11,
-    "endH": 12.5,
-    "title": "School & satellite sessions continue",
-    "type": "continues",
-    "room": "",
-    "presenter": "",
-    "chair": "",
-    "continues": true,
-    "dayKey": "tue",
-    "dayLabel": "Tue June 2",
-    "talkCount": 0
-  },
-  {
     "id": "t-brk1",
     "time": "12:30 – 2:30 PM",
     "startH": 12.5,
@@ -504,21 +459,6 @@
     "type": "break",
     "room": "Amesbury Ballroom",
     "presenter": "",
-    "dayKey": "tue",
-    "dayLabel": "Tue June 2",
-    "talkCount": 0
-  },
-  {
-    "id": "tue-cont-165",
-    "time": "4:30 – 6:00 PM",
-    "startH": 16.5,
-    "endH": 18,
-    "title": "School & satellite sessions continue",
-    "type": "continues",
-    "room": "",
-    "presenter": "",
-    "chair": "",
-    "continues": true,
     "dayKey": "tue",
     "dayLabel": "Tue June 2",
     "talkCount": 0
