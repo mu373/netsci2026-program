@@ -16,7 +16,7 @@ importers:
         version: 3.0.193(react@19.2.6)(zod@4.4.3)
       '@scalar/hono-api-reference':
         specifier: ^0.10.19
-        version: 0.10.19(hono@4.12.23)
+        version: 0.10.19(hono@4.12.25)
       '@vitejs/plugin-react':
         specifier: ^6.0.2
         version: 6.0.2(vite@8.0.14(@types/node@24.12.4)(esbuild@0.28.0)(sass@1.100.0)(tsx@4.22.3))
@@ -27,8 +27,8 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
       hono:
-        specifier: ^4.12.23
-        version: 4.12.23
+        specifier: ^4.12.25
+        version: 4.12.25
       lucide-react:
         specifier: ^1.16.0
         version: 1.16.0(react@19.2.6)
@@ -1221,8 +1221,8 @@ packages:
   hast-util-whitespace@3.0.0:
     resolution: {integrity: sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw==}
 
-  hono@4.12.23:
-    resolution: {integrity: sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA==}
+  hono@4.12.25:
+    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@6.0.0:
@@ -2487,10 +2487,10 @@ snapshots:
 
   '@scalar/helpers@0.8.0': {}
 
-  '@scalar/hono-api-reference@0.10.19(hono@4.12.23)':
+  '@scalar/hono-api-reference@0.10.19(hono@4.12.25)':
     dependencies:
       '@scalar/client-side-rendering': 0.1.12
-      hono: 4.12.23
+      hono: 4.12.25
 
   '@scalar/schemas@0.3.2':
     dependencies:
@@ -2826,7 +2826,7 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.4
 
-  hono@4.12.23: {}
+  hono@4.12.25: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:
